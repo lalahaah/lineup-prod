@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 인플루언서 링크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<script src="image-slot.js"></script>
+<style>
+body { background: #e8e8ea; padding: 40px 16px; }
+.phone {
+  max-width: 420px; margin: 0 auto; background: var(--white);
+  border: 1px solid var(--dark); border-radius: 36px; box-shadow: var(--shadow); overflow: hidden;
+}
+.mhead { background: var(--dark); color: var(--white); padding: 22px 22px 26px; }
+.mhead .brand { display:flex; align-items:center; gap:8px; font-weight:600; font-size:17px; }
+.mhead .brand .mark { width:24px; height:24px; }
+.mhead .lock { font-size:12px; color:#9a9ba5; display:flex; align-items:center; gap:6px; margin-top:4px; }
+.mhead .lock svg { width:12px; height:12px; }
+.mbody { padding: 22px; display:flex; flex-direction:column; gap:18px; }
+.mcard { border:1px solid var(--dark); border-radius:20px; padding:18px; }
+.mcard.green { background: var(--green); }
+.greet { font-size:22px; font-weight:500; letter-spacing:-0.5px; }
+.kv2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+.kv2 .k { font-size:13px; } .kv2 .k b { display:block; color:var(--muted); font-weight:400; font-size:12px; margin-bottom:2px; }
+.mlabel { font-size:13px; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.mlabel .step-no { width:22px; height:22px; border-radius:50%; background:var(--dark); color:#fff; font-size:12px; display:grid; place-items:center; }
+.mlabel .step-no.done { background:#1f8a3b; }
+.mlabel .step-no.cur { background:var(--green); color:var(--dark); }
+.field input, .field textarea { width:100%; font-family:inherit; font-size:15px; padding:13px 16px; border:1px solid var(--dark); border-radius:12px; background:#fff; margin-bottom:10px; }
+.field textarea { min-height:70px; resize:vertical; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.mbtn { width:100%; font-family:inherit; font-size:16px; font-weight:500; padding:15px; border-radius:13px; border:1px solid var(--dark); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+.mbtn.dark { background:var(--dark); color:#fff; } .mbtn.green { background:var(--green); color:var(--dark); }
+.mbtn.ghost { background:#fff; color:var(--dark); }
+.mbtn svg { width:18px; height:18px; }
+.done-tag { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:#1f8a3b; font-weight:500; }
+.done-tag svg { width:15px; height:15px; }
+.divider { height:1px; background:var(--line-soft); margin:2px 0; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="mhead">
+    <div class="brand"><svg class="mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="#B9FF66"/><path d="M17 6a11 11 0 1 0 0 22" stroke="#191A23" stroke-width="3.4"/><circle cx="17" cy="17" r="4" fill="#191A23"/></svg>RoundFlow</div>
+    <div class="lock"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="11" rx="2" stroke="#9a9ba5" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9a9ba5" stroke-width="1.7"/></svg>라운드미디어가 보낸 안전한 링크</div>
+  </div>
+
+  <div class="mbody">
+    <div>
+      <div class="greet">유리쿡 님, 안녕하세요 👋</div>
+      <p class="muted" style="font-size:14px;margin-top:6px">CUCKOO 캠페인 협업을 제안드려요. 아래 내용을 확인하고 수락 여부를 선택해 주세요.</p>
+    </div>
+
+    <!-- campaign card -->
+    <div class="mcard green">
+      <div class="row between"><span class="badge dark">CUCKOO</span><span class="badge" style="background:#fff">인스타 릴스</span></div>
+      <div style="font-weight:500;font-size:18px;margin:12px 0 2px">쿠쿠 트윈프레셔 신제품 런칭</div>
+      <div class="kv2">
+        <div class="k"><b>제안 단가</b>₩800,000</div>
+        <div class="k"><b>원고 마감</b>06.08</div>
+        <div class="k"><b>게시 기간</b>06.10 ~ 06.20</div>
+        <div class="k"><b>필수 태그</b>#신혼집밥 외 1</div>
+      </div>
+    </div>
+
+    <!-- step 1: accept -->
+    <div>
+      <div class="mlabel"><span class="step-no cur">1</span>섭외 수락</div>
+      <div class="two">
+        <button class="mbtn ghost">거절</button>
+        <button class="mbtn green"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>수락하기</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- step 2: shipping -->
+    <div>
+      <div class="mlabel"><span class="step-no">2</span>배송지 입력</div>
+      <div class="field">
+        <input placeholder="받는 분 이름" />
+        <input placeholder="연락처 (- 없이)" />
+        <input placeholder="주소" />
+        <input placeholder="상세주소" />
+        <button class="mbtn dark">배송지 저장</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- step 3: draft -->
+    <div>
+      <div class="mlabel"><span class="step-no">3</span>원고 제출</div>
+      <image-slot id="infdraft" style="width:100%;height:150px" shape="rounded" radius="14" placeholder="원고 파일 업로드 (영상·이미지)"></image-slot>
+      <div class="field" style="margin-top:10px">
+        <textarea placeholder="캡션 원고를 입력하세요 (#필수태그 포함)"></textarea>
+        <button class="mbtn dark">원고 제출하기</button>
+      </div>
+      <p class="muted" style="font-size:12px;text-align:center;margin-top:4px">제출 후에도 운영팀 피드백에 따라 재제출할 수 있어요.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

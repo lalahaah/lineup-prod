@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 인플루언서 캠페인 운영 OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="positivus.css" />
+<script src="image-slot.js"></script>
+<style>
+/* ---------- page-local layout ---------- */
+
+/* NAV */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--white);
+  border-bottom: 1px solid transparent;
+}
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 100px; }
+.brand { display: flex; align-items: center; gap: 11px; font-size: 26px; font-weight: 600; letter-spacing: -1px; }
+.brand .mark { width: 34px; height: 34px; }
+.menu { display: flex; align-items: center; gap: 36px; font-size: 18px; }
+.menu a:hover { color: #5a5a5a; }
+.menu .quote { border: 1px solid var(--dark); border-radius: 12px; padding: 14px 28px; }
+.menu .quote:hover { background: var(--dark); color: var(--white); }
+
+/* HERO */
+.hero .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: center; padding-top: 50px; padding-bottom: 50px; }
+.hero h1 { margin-bottom: 28px; }
+.hero p { font-size: 20px; line-height: 1.6; margin-bottom: 32px; max-width: 460px; color: #1c1c22; }
+.hero-art { position: relative; min-height: 460px; display: grid; place-items: center; }
+.hero-stat {
+  position: absolute; bottom: 18px; left: -8px;
+  background: var(--white); border: 1px solid var(--dark); border-radius: 22px;
+  box-shadow: var(--shadow); padding: 18px 26px;
+}
+.hero-stat .n { font-size: 40px; font-weight: 600; letter-spacing: -1.5px; }
+.hero-stat .n s { color: var(--muted); text-decoration-thickness: 2px; }
+.hero-stat .l { font-size: 14px; color: #555; }
+
+/* LOGO BAR */
+.logos { padding: 10px 0 50px; }
+.logos .row { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; opacity: .85; }
+.logos .lg { font-size: 26px; font-weight: 600; letter-spacing: -1px; color: #b3b3b3; }
+
+/* SERVICES GRID */
+.svc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.svc {
+  border: 1px solid var(--dark); border-radius: var(--radius-card); box-shadow: var(--shadow);
+  padding: 50px; display: flex; justify-content: space-between; gap: 20px; min-height: 250px; align-items: center;
+}
+.svc .txt { display: flex; flex-direction: column; height: 100%; justify-content: space-between; gap: 26px; }
+.svc .pill { display: inline-block; background: var(--green); border-radius: 7px; padding: 0 7px; font-size: 28px; font-weight: 500; letter-spacing: -0.5px; }
+.svc.gray { background: var(--gray); }
+.svc.green { background: var(--green); }
+.svc.green .pill { background: var(--white); }
+.svc.dark { background: var(--dark); }
+.svc.dark .pill { background: var(--green); color: var(--dark); }
+.svc.dark .learn { color: var(--white); }
+.svc.dark .learn .arrow { background: var(--green); }
+.svc.dark .learn .arrow svg path { stroke: var(--dark); }
+.svc.green .learn .arrow { background: var(--dark); }
+.svc-ill { width: 165px; height: 150px; flex: 0 0 auto; display: grid; place-items: center; }
+
+/* CTA BANNER */
+.cta-banner { background: var(--gray); border-radius: var(--radius-card); padding: 60px; display: flex; align-items: center; justify-content: space-between; gap: 30px; position: relative; overflow: hidden; }
+.cta-banner .c { max-width: 500px; }
+.cta-banner h3 { margin-bottom: 20px; }
+.cta-banner p { margin-bottom: 28px; font-size: 18px; line-height: 1.55; }
+
+/* PROCESS ACCORDION */
+.acc { display: flex; flex-direction: column; gap: 28px; }
+.acc-item {
+  border: 1px solid var(--dark); border-radius: var(--radius-card); box-shadow: var(--shadow);
+  background: var(--gray); padding: 38px 60px; cursor: pointer; transition: background .2s;
+}
+.acc-item.open { background: var(--green); }
+.acc-head { display: flex; align-items: center; gap: 25px; }
+.acc-head .num { font-size: 48px; font-weight: 500; letter-spacing: -2px; }
+.acc-head .t { font-size: 26px; font-weight: 500; letter-spacing: -0.5px; flex: 1; }
+.acc-head .pm {
+  width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--dark);
+  background: var(--gray); display: grid; place-items: center; flex: 0 0 auto; font-size: 34px;
+}
+.acc-item.open .acc-head .pm { background: var(--green); }
+.acc-body { max-height: 0; overflow: hidden; transition: max-height .3s ease, margin .3s ease, padding .3s ease; }
+.acc-item.open .acc-body { max-height: 260px; margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--dark); }
+.acc-body p { font-size: 18px; line-height: 1.6; max-width: 880px; }
+
+/* CASE STUDIES */
+.cases { background: var(--dark); border-radius: var(--radius-card); padding: 60px; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.case { padding: 0 50px; color: var(--white); }
+.case + .case { border-left: 1px solid #3a3a44; }
+.case:first-child { padding-left: 0; }
+.case:last-child { padding-right: 0; }
+.case .big { font-size: 48px; font-weight: 600; letter-spacing: -1.5px; color: var(--green); margin-bottom: 6px; }
+.case p { font-size: 17px; line-height: 1.5; margin-bottom: 18px; }
+.case .more { color: var(--green); display: inline-flex; align-items: center; gap: 12px; font-size: 18px; }
+
+/* TEAM */
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+.member {
+  border: 1px solid var(--dark); border-radius: var(--radius-card); box-shadow: var(--shadow);
+  background: var(--white); padding: 40px;
+}
+.member .top { display: flex; align-items: flex-end; gap: 20px; padding-bottom: 28px; border-bottom: 1px solid var(--dark); margin-bottom: 18px; }
+.member image-slot { border-radius: 50%; border: 1px solid var(--dark); overflow: hidden; }
+.member .name { font-size: 20px; font-weight: 500; }
+.member .role { font-size: 16px; }
+.member .bio { font-size: 16px; line-height: 1.55; }
+
+/* TESTIMONIAL */
+.testi { background: var(--dark); border-radius: var(--radius-card); padding: 84px 0; position: relative; }
+.bubble {
+  position: relative; max-width: 600px; margin: 0 auto;
+  border: 1px solid var(--green); border-radius: 45px; padding: 48px 58px; color: var(--white);
+}
+.bubble:after {
+  content: ""; position: absolute; bottom: -22px; left: 60px;
+  border-left: 24px solid transparent; border-top: 24px solid var(--green);
+}
+.bubble p { font-size: 20px; line-height: 1.6; }
+.testi .who { max-width: 600px; margin: 40px auto 0; padding-left: 60px; }
+.testi .who .nm { color: var(--green); font-size: 20px; font-weight: 500; }
+.testi .who .rl { color: var(--white); font-size: 16px; }
+
+/* CONTACT */
+.contact { background: var(--gray); border-radius: var(--radius-card); padding: 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; position: relative; overflow: hidden; }
+.form { display: flex; flex-direction: column; gap: 25px; max-width: 480px; }
+.radios { display: flex; gap: 35px; }
+.radios label { display: flex; align-items: center; gap: 12px; font-size: 18px; cursor: pointer; }
+.radios input { width: 22px; height: 22px; accent-color: var(--dark); }
+.field label { display: block; font-size: 16px; margin-bottom: 6px; }
+.field input, .field textarea {
+  width: 100%; font-family: inherit; font-size: 16px; padding: 16px 28px;
+  border: 1px solid var(--dark); border-radius: 14px; background: var(--white); color: var(--dark);
+}
+.field textarea { min-height: 130px; resize: vertical; }
+.contact-art { justify-self: end; }
+
+/* FOOTER */
+.footer { background: var(--dark); border-radius: 45px 45px 0 0; color: var(--white); margin-top: 70px; padding: 55px 60px 50px; }
+.footer .top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; padding-bottom: 45px; border-bottom: 1px solid #3a3a44; }
+.footer .brand { color: var(--white); }
+.footer .fmenu { display: flex; gap: 40px; font-size: 18px; text-decoration: underline; text-underline-offset: 4px; }
+.footer .fmenu a:hover { color: var(--green); }
+.footer .socials { display: flex; gap: 14px; }
+.footer .socials a { width: 38px; height: 38px; border-radius: 50%; background: var(--white); display: grid; place-items: center; }
+.footer .socials a:hover { background: var(--green); }
+.footer .mid { display: flex; gap: 60px; padding: 45px 0; align-items: flex-start; }
+.footer .contact-block h4 { background: var(--green); color: var(--dark); display: inline-block; border-radius: 7px; padding: 0 7px; margin-bottom: 22px; font-size: 20px; }
+.footer .contact-block p { font-size: 18px; margin-bottom: 14px; }
+.footer .sub { flex: 1; background: #292a32; border-radius: 14px; padding: 56px 40px; display: flex; gap: 20px; }
+.footer .sub input { flex: 1; background: transparent; border: 1px solid var(--white); border-radius: 14px; padding: 18px 30px; color: var(--white); font-family: inherit; font-size: 18px; }
+.footer .bottom { display: flex; gap: 40px; align-items: center; padding-top: 40px; border-top: 1px solid #3a3a44; font-size: 18px; }
+.footer .bottom a { text-decoration: underline; text-underline-offset: 4px; }
+
+/* RESPONSIVE */
+@media (max-width: 980px) {
+  .wrap { padding: 0 24px; }
+  .menu { display: none; }
+  .hero .wrap { grid-template-columns: 1fr; }
+  .hero-art { min-height: 360px; }
+  .svc-grid, .team-grid { grid-template-columns: 1fr; }
+  .cases { grid-template-columns: 1fr; gap: 40px; }
+  .case { padding: 0; } .case + .case { border-left: none; border-top: 1px solid #3a3a44; padding-top: 30px; }
+  .cta-banner, .contact { flex-direction: column; grid-template-columns: 1fr; text-align: left; }
+  .contact-art { display: none; }
+  .footer .mid { flex-direction: column; }
+  .section-head { flex-direction: column; align-items: flex-start; gap: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap">
+    <div class="brand" data-screen-label="nav">
+      <svg class="mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" fill="#191A23"/>
+        <path d="M17 6a11 11 0 1 0 0 22" stroke="#B9FF66" stroke-width="3.4" fill="none"/>
+        <circle cx="17" cy="17" r="4" fill="#B9FF66"/>
+      </svg>
+      RoundFlow
+    </div>
+    <nav class="menu">
+      <a href="#services">기능</a>
+      <a href="#process">파이프라인</a>
+      <a href="#cases">성과</a>
+      <a href="#team">팀</a>
+      <a href="Dashboard.html">로그인</a>
+      <a href="#contact" class="quote">데모 신청</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section class="hero section">
+  <div class="wrap">
+    <div class="hero-copy">
+      <h1>흩어진 캠페인 운영을 <span class="hl">하나의 흐름</span>으로</h1>
+      <p>RoundFlow는 인플루언서 마케팅 광고대행사를 위한 캠페인 운영 OS입니다. 섭외부터 정산까지 9단계 파이프라인을 한 곳에서 관리하세요.</p>
+      <a href="#contact" class="btn">데모 신청하기</a>
+    </div>
+    <div class="hero-art">
+      <image-slot id="hero" style="width:100%;max-width:520px;height:420px" shape="rounded" radius="32"
+        placeholder="대시보드 목업 이미지를 드롭하세요"></image-slot>
+      <div class="hero-stat">
+        <div class="n">8h <span style="font-size:26px;color:var(--muted)">→</span> <span class="hl" style="padding:0 4px">2h</span></div>
+        <div class="l">캠페인 1건당 행정 시간 · 75%↓</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGO BAR ============ -->
+<section class="logos">
+  <div class="wrap">
+    <div class="row">
+      <span class="lg">CUCKOO</span>
+      <span class="lg">라운드미디어</span>
+      <span class="lg">Supabase</span>
+      <span class="lg">Resend</span>
+      <span class="lg">Next.js</span>
+      <span class="lg">TossPay</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">핵심 기능</span>
+      <p>9단계 캠페인 파이프라인의 모든 단계를 하나의 플랫폼에서. 운영팀 · 광고주 · 인플루언서가 같은 흐름 위에서 일합니다.</p>
+    </div>
+    <div class="svc-grid">
+
+      <!-- 1 -->
+      <article class="svc gray" data-screen-label="svc-pipeline">
+        <div class="txt">
+          <div><span class="pill">캠페인</span><br><span class="pill">파이프라인</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><rect x="2" y="20" width="48" height="110" rx="10" fill="#fff" stroke="#191A23" stroke-width="2"/><rect x="58" y="20" width="48" height="110" rx="10" fill="#B9FF66" stroke="#191A23" stroke-width="2"/><rect x="114" y="20" width="48" height="110" rx="10" fill="#fff" stroke="#191A23" stroke-width="2"/><rect x="9" y="30" width="34" height="22" rx="5" fill="#191A23"/><rect x="9" y="58" width="34" height="22" rx="5" fill="#B9FF66"/><rect x="65" y="30" width="34" height="22" rx="5" fill="#191A23"/><rect x="121" y="30" width="34" height="22" rx="5" fill="#191A23"/></svg></div>
+      </article>
+
+      <!-- 2 -->
+      <article class="svc green" data-screen-label="svc-db">
+        <div class="txt">
+          <div><span class="pill">인플루언서</span><br><span class="pill">데이터베이스</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><ellipse cx="70" cy="32" rx="50" ry="16" fill="#fff" stroke="#191A23" stroke-width="2"/><path d="M20 32v34c0 9 22 16 50 16s50-7 50-16V32" fill="#fff" stroke="#191A23" stroke-width="2"/><path d="M20 66v22c0 9 22 16 50 16s50-7 50-16V66" fill="#191A23" stroke="#191A23" stroke-width="2"/><circle cx="120" cy="108" r="26" fill="#fff" stroke="#191A23" stroke-width="3"/><path d="M138 126l16 16" stroke="#191A23" stroke-width="5" stroke-linecap="round"/></svg></div>
+      </article>
+
+      <!-- 3 -->
+      <article class="svc dark" data-screen-label="svc-portal">
+        <div class="txt">
+          <div><span class="pill">광고주</span><br><span class="pill">포털</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#191A23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><rect x="6" y="14" width="153" height="118" rx="12" fill="#fff" stroke="#B9FF66" stroke-width="2"/><path d="M6 38h153" stroke="#B9FF66" stroke-width="2"/><circle cx="18" cy="26" r="3.5" fill="#B9FF66"/><circle cx="30" cy="26" r="3.5" fill="#B9FF66"/><rect x="20" y="52" width="55" height="64" rx="9" fill="#B9FF66"/><rect x="90" y="52" width="55" height="64" rx="9" fill="#191A23" stroke="#B9FF66" stroke-width="2"/><path d="M34 84l9 9 16-18" stroke="#191A23" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </article>
+
+      <!-- 4 -->
+      <article class="svc green" data-screen-label="svc-link">
+        <div class="txt">
+          <div><span class="pill">인플루언서</span><br><span class="pill">링크</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><rect x="48" y="6" width="70" height="138" rx="16" fill="#191A23" stroke="#B9FF66" stroke-width="2"/><rect x="58" y="22" width="50" height="92" rx="7" fill="#fff"/><rect x="66" y="34" width="34" height="8" rx="4" fill="#B9FF66"/><rect x="66" y="50" width="34" height="6" rx="3" fill="#191A23"/><circle cx="83" cy="128" r="6" fill="#B9FF66"/><path d="M70 84l8 8 14-16" stroke="#B9FF66" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </article>
+
+      <!-- 5 -->
+      <article class="svc dark" data-screen-label="svc-review">
+        <div class="txt">
+          <div><span class="pill">원고 검수</span><br><span class="pill">버전 관리</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#191A23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><rect x="34" y="14" width="98" height="122" rx="12" fill="#fff" stroke="#B9FF66" stroke-width="2"/><rect x="48" y="34" width="56" height="8" rx="4" fill="#191A23"/><rect x="48" y="52" width="70" height="6" rx="3" fill="#c7c7c7"/><rect x="48" y="66" width="70" height="6" rx="3" fill="#c7c7c7"/><circle cx="118" cy="104" r="22" fill="#B9FF66" stroke="#191A23" stroke-width="2"/><path d="M108 104l7 7 13-14" stroke="#191A23" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </article>
+
+      <!-- 6 -->
+      <article class="svc gray" data-screen-label="svc-billing">
+        <div class="txt">
+          <div><span class="pill">정산</span><br><span class="pill">자동화</span></div>
+          <a class="learn"><span class="arrow"><svg viewBox="0 0 18 18" fill="none"><path d="M4 14L14 4M6.5 4H14V11.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>자세히 보기</a>
+        </div>
+        <div class="svc-ill"><svg viewBox="0 0 165 150" fill="none"><path d="M40 10h70l16 16v114H40z" fill="#fff" stroke="#191A23" stroke-width="2"/><path d="M110 10v16h16" fill="none" stroke="#191A23" stroke-width="2"/><rect x="54" y="50" width="58" height="8" rx="4" fill="#191A23"/><rect x="54" y="68" width="40" height="6" rx="3" fill="#bdbdbd"/><circle cx="110" cy="112" r="26" fill="#B9FF66" stroke="#191A23" stroke-width="2"/><path d="M101 100h18M101 112h18M110 100l-6 24M110 100l6 24" stroke="#191A23" stroke-width="3" stroke-linecap="round"/></svg></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA BANNER ============ -->
+<section class="section">
+  <div class="wrap">
+    <div class="cta-banner">
+      <div class="c">
+        <h3>월 80시간의 행정 낭비,<br>이제 끝낼 시간입니다</h3>
+        <p>이메일 · 엑셀 · 카톡 · 전화로 흩어진 운영을 RoundFlow 하나로 통합하세요. 쿠쿠전자 캠페인에 즉시 적용 가능합니다.</p>
+        <a href="#contact" class="btn btn-green">도입 상담 신청</a>
+      </div>
+      <div style="width:280px;flex:0 0 auto" class="cta-ill"><svg viewBox="0 0 280 240" fill="none"><path d="M40 60h70M40 120h70M40 180h70" stroke="#191A23" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="60" r="9" fill="#191A23"/><circle cx="40" cy="120" r="9" fill="#191A23"/><circle cx="40" cy="180" r="9" fill="#191A23"/><path d="M110 60c60 0 60 60 120 60-60 0-60 60-120 60" stroke="#191A23" stroke-width="3" fill="none"/><circle cx="234" cy="120" r="42" fill="#B9FF66" stroke="#191A23" stroke-width="3"/><path d="M218 120l10 10 22-24" stroke="#191A23" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M150 28c0 14-11 25-25 25 14 0 25 11 25 25 0-14 11-25 25-25-14 0-25-11-25-25z" fill="#B9FF66" stroke="#191A23" stroke-width="2"/></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROCESS ACCORDION ============ -->
+<section class="section" id="process">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">파이프라인</span>
+      <p>브리핑에서 완료까지, 캠페인의 모든 단계가 자동으로 다음 단계를 호출합니다. 어디서 막혔는지 한눈에 보입니다.</p>
+    </div>
+    <div class="acc">
+      <div class="acc-item open">
+        <div class="acc-head"><span class="num">01</span><span class="t">브리핑 &amp; 서치 · Briefing</span><span class="pm">–</span></div>
+        <div class="acc-body"><p>캠페인 생성 시 광고주 포털 토큰이 자동 발급되고, 담당 매니저에게 알림이 전송됩니다. 인플루언서 DB에서 조건에 맞는 후보를 검색해 후보 리스트를 구성합니다.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-head"><span class="num">02</span><span class="t">제안 &amp; 선택 · Proposal</span><span class="pm">+</span></div>
+        <div class="acc-body"><p>광고주는 로그인 없이 포털 링크로 후보 인플루언서 카드를 검토하고 선택/패스합니다. 상태는 실시간 저장되어 새로고침 후에도 유지됩니다.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-head"><span class="num">03</span><span class="t">섭외 &amp; 확정 · Outreach</span><span class="pm">+</span></div>
+        <div class="acc-body"><p>선택된 인플루언서에게 섭외 이메일이 자동 발송되고 컨택 이력이 기록됩니다. 인플루언서가 링크에서 수락하면 confirmed 상태로 전환됩니다.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-head"><span class="num">04</span><span class="t">배송 · Shipping</span><span class="pm">+</span></div>
+        <div class="acc-body"><p>확정 인플루언서의 배송지가 자동 수집되고, 운송장 번호 입력과 배송 상태 추적을 한 화면에서 관리합니다. 원고 마감 D-7 리마인더가 자동 발송됩니다.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-head"><span class="num">05</span><span class="t">원고 검수 · Review</span><span class="pm">+</span></div>
+        <div class="acc-body"><p>제출된 원고를 승인/수정요청/반려하고, 버전별 히스토리와 피드백 이력을 추적합니다. 수정 요청 시 인플루언서에게 자동 이메일이 발송됩니다.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-head"><span class="num">06</span><span class="t">정산 &amp; 완료 · Billing</span><span class="pm">+</span></div>
+        <div class="acc-body"><p>인플루언서 비용 합계 · 대행수수료 · 부가세가 자동 계산되어 청구서 PDF가 생성됩니다. 지급 상태를 관리하고 월별로 내역을 조회합니다.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CASE / METRICS ============ -->
+<section class="section" id="cases">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">기대 성과</span>
+      <p>Phase 1 도입 4주차 기준 목표 지표. 행정 시간은 줄이고, 동시 운영 가능한 캠페인 수는 늘립니다.</p>
+    </div>
+    <div class="cases">
+      <div class="case">
+        <div class="big">−75%</div>
+        <p>캠페인 1건당 행정 업무 시간 (8h → 2h 이하)</p>
+        <a class="more">자세히 <svg style="width:22px;height:22px;vertical-align:middle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11.2" fill="#B9FF66"/><path d="M8 16L16 8M10 8H16V14" stroke="#191A23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="case">
+        <div class="big">10분</div>
+        <p>캠페인 생성부터 광고주 보고 링크 공유까지 (기존 2h)</p>
+        <a class="more">자세히 <svg style="width:22px;height:22px;vertical-align:middle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11.2" fill="#B9FF66"/><path d="M8 16L16 8M10 8H16V14" stroke="#191A23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="case">
+        <div class="big">×3</div>
+        <p>매니저 1인당 동시 운영 캠페인 수 (5개 → 15개)</p>
+        <a class="more">자세히 <svg style="width:22px;height:22px;vertical-align:middle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11.2" fill="#B9FF66"/><path d="M8 16L16 8M10 8H16V14" stroke="#191A23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEAM ============ -->
+<section class="section" id="team">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">만든 사람들</span>
+      <p>라운드미디어의 운영 현장에서 출발해, 같은 문제를 매일 겪던 팀이 직접 설계했습니다.</p>
+    </div>
+    <div class="team-grid">
+      <div class="member">
+        <div class="top">
+          <image-slot id="m1" style="width:90px;height:90px" shape="circle" placeholder="사진"></image-slot>
+          <div><div class="name">박라하</div><div class="role">Product Lead</div></div>
+        </div>
+        <p class="bio">라운드미디어 대표. 9단계 파이프라인을 설계하고 쿠쿠전자 캠페인 운영을 총괄합니다.</p>
+      </div>
+      <div class="member">
+        <div class="top">
+          <image-slot id="m2" style="width:90px;height:90px" shape="circle" placeholder="사진"></image-slot>
+          <div><div class="name">김현우</div><div class="role">Campaign Manager</div></div>
+        </div>
+        <p class="bio">캠페인 매니저 3년차. 동시에 7~10개 캠페인을 운영하며 현장 요구사항을 정의했습니다.</p>
+      </div>
+      <div class="member">
+        <div class="top">
+          <image-slot id="m3" style="width:90px;height:90px" shape="circle" placeholder="사진"></image-slot>
+          <div><div class="name">이도윤</div><div class="role">Engineering</div></div>
+        </div>
+        <p class="bio">Next.js · Supabase 기반 아키텍처를 설계. 멀티테넌트 확장을 염두에 둔 데이터 모델을 구축합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIAL ============ -->
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">현장의 목소리</span>
+      <p>매일 캠페인을 병렬로 굴리는 운영 매니저가 가장 먼저 체감하는 변화입니다.</p>
+    </div>
+    <div class="testi">
+      <div class="bubble">
+        <p>"예전엔 어느 캠페인에서 원고 컨펌이 막혀 있는지 파악하는 데만 10분이 걸렸어요. 지금은 로그인하면 오늘 해야 할 일이 우선순위 큐에 정리돼 있어요. 같은 내용을 카톡에도 메일에도 따로 보내던 일이 사라졌습니다."</p>
+      </div>
+      <div class="who">
+        <div class="nm">김현우</div>
+        <div class="rl">캠페인 매니저, 라운드미디어</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="section" id="contact">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">데모 신청</span>
+      <p>도입을 검토 중이신가요? 우리 캠페인 규모에 맞는 운영 흐름을 함께 설계해 드립니다.</p>
+    </div>
+    <div class="contact">
+      <form class="form" onsubmit="return false">
+        <div class="radios">
+          <label><input type="radio" name="t" checked /> 도입 상담</label>
+          <label><input type="radio" name="t" /> 데모 요청</label>
+        </div>
+        <div class="field"><label>이름</label><input type="text" placeholder="이름을 입력하세요" /></div>
+        <div class="field"><label>이메일</label><input type="email" placeholder="email@company.com" /></div>
+        <div class="field"><label>메시지</label><textarea placeholder="운영 중인 캠페인 규모와 도입 시기를 알려주세요"></textarea></div>
+        <button class="btn" type="submit">신청서 보내기</button>
+      </form>
+      <div class="contact-art"><svg viewBox="0 0 360 320" fill="none"><path d="M120 90c0 22-18 40-40 40 22 0 40 18 40 40 0-22 18-40 40-40-22 0-40-18-40-40z" fill="#B9FF66" stroke="#191A23" stroke-width="2"/><rect x="150" y="120" width="170" height="118" rx="16" fill="#fff" stroke="#191A23" stroke-width="2"/><path d="M150 138l85 56 85-56" stroke="#191A23" stroke-width="2" fill="none"/><circle cx="300" cy="70" r="14" fill="#191A23"/></svg></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" fill="#B9FF66"/>
+        <path d="M17 6a11 11 0 1 0 0 22" stroke="#191A23" stroke-width="3.4" fill="none"/>
+        <circle cx="17" cy="17" r="4" fill="#191A23"/>
+      </svg>
+      RoundFlow
+    </div>
+    <nav class="fmenu">
+      <a href="#services">기능</a>
+      <a href="#process">파이프라인</a>
+      <a href="#cases">성과</a>
+      <a href="#contact">데모 신청</a>
+    </nav>
+    <div class="socials">
+      <a aria-label="link"><svg viewBox="0 0 20 20" width="18" height="18" fill="#191A23"><path d="M4 7h2.6v9H4zM5.3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM9 7h2.5v1.3c.4-.7 1.4-1.5 2.9-1.5 3 0 3.6 1.9 3.6 4.4V16h-2.6v-3.8c0-.9 0-2.1-1.4-2.1s-1.6 1-1.6 2v3.9H9z"/></svg></a>
+      <a aria-label="link"><svg viewBox="0 0 20 20" width="18" height="18" fill="#191A23"><path d="M14.5 3h2.7l-5.9 6.7L18.5 17h-5.4l-3.6-4.7L5.6 17H2.9l6.3-7.2L2.7 3h5.5l3.3 4.3zM13.6 15.4h1.5L7.1 4.5H5.5z"/></svg></a>
+      <a aria-label="link"><svg viewBox="0 0 20 20" width="18" height="18" fill="#191A23"><path d="M18 6.2c-.2-.9-.8-1.5-1.7-1.7C14.8 4.1 10 4.1 10 4.1s-4.8 0-6.3.4c-.9.2-1.5.8-1.7 1.7C1.6 7.7 1.6 10 1.6 10s0 2.3.4 3.8c.2.9.8 1.5 1.7 1.7 1.5.4 6.3.4 6.3.4s4.8 0 6.3-.4c.9-.2 1.5-.8 1.7-1.7.4-1.5.4-3.8.4-3.8s0-2.3-.4-3.8zM8.4 12.8V7.2l4.7 2.8z"/></svg></a>
+    </div>
+  </div>
+  <div class="mid">
+    <div class="contact-block">
+      <h4>Contact</h4>
+      <p>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2a424f4646456a58455f444e4c46455d044345">[email&#160;protected]</a></p>
+      <p>Phone: 02-1234-5678</p>
+      <p>(주)라운드미디어 · 서울특별시</p>
+    </div>
+    <div class="sub">
+      <input type="email" placeholder="이메일 주소" />
+      <button class="btn btn-green" type="button">업데이트 받기</button>
+    </div>
+  </div>
+  <div class="bottom">
+    <span>© 2026 RoundFlow by 라운드미디어. All Rights Reserved.</span>
+    <a href="#">Privacy Policy</a>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// accordion
+document.querySelectorAll('.acc-item').forEach(function(it){
+  it.addEventListener('click', function(){
+    var open = it.classList.contains('open');
+    document.querySelectorAll('.acc-item').forEach(function(x){
+      x.classList.remove('open');
+      x.querySelector('.pm').textContent = '+';
+    });
+    if(!open){ it.classList.add('open'); it.querySelector('.pm').textContent = '–'; }
+  });
+});
+</script>
+</body>
+</html>

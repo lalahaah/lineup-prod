@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 광고주 포털</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+body { background: var(--gray); }
+.pwrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.pnav { background: var(--white); border-bottom: 1px solid var(--line-soft); }
+.pnav .in { max-width:1080px; margin:0 auto; padding: 18px 24px; display:flex; align-items:center; gap:14px; }
+.pnav .brand { display:flex; align-items:center; gap:9px; font-weight:600; font-size:20px; letter-spacing:-0.5px; }
+.pnav .brand .mark { width:28px; height:28px; }
+.pnav .token { margin-left:auto; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:7px; }
+.pnav .token svg { width:14px; height:14px; }
+
+.phero { padding: 40px 0 10px; }
+.phero .ey { font-size:14px; color:var(--muted); }
+.phero h1 { font-size:34px; margin:8px 0 6px; }
+.summary { display:flex; gap:14px; flex-wrap:wrap; margin-top:20px; }
+.scard { background:var(--white); border:1px solid var(--dark); border-radius:16px; padding:14px 20px; box-shadow: var(--shadow-sm); }
+.scard b { display:block; font-size:12px; color:var(--muted); font-weight:400; margin-bottom:3px; }
+.scard span { font-size:18px; font-weight:500; }
+
+.tabbar { display:flex; gap:8px; margin: 30px 0 22px; border-bottom:1px solid var(--line-soft); }
+.ptab { font-size:16px; padding:12px 4px; margin-right:22px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+.ptab.on { color:var(--dark); font-weight:500; border-bottom-color:var(--dark); }
+.ptab .n { font-size:13px; background:var(--gray); border:1px solid var(--line-soft); border-radius:20px; padding:0 8px; margin-left:6px; }
+
+.cand-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:20px; }
+.cand {
+  background:var(--white); border:1px solid var(--dark); border-radius:24px; box-shadow: var(--shadow);
+  overflow:hidden; transition: transform .12s;
+}
+.cand .top { padding:20px; display:flex; align-items:center; gap:13px; }
+.cand .meta { padding:0 20px 16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.cand .kv { font-size:13px; } .cand .kv b { display:block; color:var(--muted); font-weight:400; font-size:12px; margin-bottom:2px; }
+.cand .pic { margin:0 20px; }
+.cand .pick { display:flex; border-top:1px solid var(--line-soft); }
+.cand .pick button { flex:1; font-family:inherit; font-size:15px; font-weight:500; padding:15px; border:0; background:var(--white); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
+.cand .pick button svg { width:17px; height:17px; }
+.cand .pick .pass { border-right:1px solid var(--line-soft); color:var(--muted); }
+.cand .pick .sel:hover { background:var(--green); }
+.cand .pick .pass:hover { background:var(--gray); }
+.cand.chosen { box-shadow: 0 0 0 2px var(--green), var(--shadow); }
+.cand.chosen .pick .sel { background:var(--green); }
+.cand.passed { opacity:.5; }
+.cand.passed .pick .pass { background:var(--gray); }
+.cat { font-size:12.5px; padding:3px 10px; border-radius:20px; background:var(--gray); border:1px solid var(--line-soft); }
+
+.subbar { position:sticky; bottom:0; background:var(--white); border:1px solid var(--dark); border-radius:18px; box-shadow:var(--shadow); margin:32px 0 40px; padding:18px 26px; display:flex; align-items:center; gap:18px; }
+.subbar .av-stack .av { width:34px; height:34px; }
+@media (max-width:900px){ .cand-grid{ grid-template-columns:1fr 1fr; } }
+@media (max-width:620px){ .cand-grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="pnav">
+  <div class="in">
+    <div class="brand"><svg class="mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="#191A23"/><path d="M17 6a11 11 0 1 0 0 22" stroke="#B9FF66" stroke-width="3.4"/><circle cx="17" cy="17" r="4" fill="#B9FF66"/></svg>RoundFlow</div>
+    <span class="token"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="11" rx="2" stroke="#6a6a72" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#6a6a72" stroke-width="1.7"/></svg>안전한 링크 · 로그인 불필요</span>
+  </div>
+</div>
+
+<div class="pwrap">
+  <div class="phero">
+    <div class="ey">라운드미디어가 보낸 인플루언서 후보 제안</div>
+    <h1>쿠쿠 에어프라이어 봄 캠페인</h1>
+    <p class="muted" style="font-size:15px">아래 후보 중 함께하고 싶은 인플루언서를 선택해 주세요. 선택은 자동 저장되며, 다 고르셨으면 하단에서 제출하시면 됩니다.</p>
+    <div class="summary">
+      <div class="scard"><b>광고주</b><span>CUCKOO</span></div>
+      <div class="scard"><b>제안 후보</b><span>8명</span></div>
+      <div class="scard"><b>총 예산</b><span>₩12,000,000</span></div>
+      <div class="scard"><b>회신 기한</b><span>06.09 (D-3)</span></div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <span class="ptab on">후보 검토 <span class="n">8</span></span>
+    <span class="ptab">원고 컨펌 <span class="n">대기</span></span>
+    <span class="ptab">성과 리포트</span>
+  </div>
+
+  <div class="cand-grid">
+    <!-- chosen -->
+    <div class="cand chosen">
+      <div class="top"><span class="av c1">유</span><div><div style="font-weight:500">유리쿡</div><div class="muted" style="font-size:13px">@yuri_cooks</div></div></div>
+      <image-slot id="c1" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>인스타 · 푸드</div><div class="kv"><b>팔로워</b>12.5만</div><div class="kv"><b>참여율</b>4.8%</div><div class="kv"><b>제안 단가</b>₩80만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 신혼집밥 콘텐츠 강점</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택됨</button></div>
+    </div>
+    <!-- chosen -->
+    <div class="cand chosen">
+      <div class="top"><span class="av c3">준</span><div><div style="font-weight:500">먹방준</div><div class="muted" style="font-size:13px">@mukbang_jun</div></div></div>
+      <image-slot id="c2" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>유튜브 · 푸드</div><div class="kv"><b>팔로워</b>52만</div><div class="kv"><b>참여율</b>6.1%</div><div class="kv"><b>제안 단가</b>₩400만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 조리 리뷰 도달 강점</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택됨</button></div>
+    </div>
+    <!-- neutral -->
+    <div class="cand">
+      <div class="top"><span class="av c2">소</span><div><div style="font-weight:500">소연홈</div><div class="muted" style="font-size:13px">@soyeon.home</div></div></div>
+      <image-slot id="c3" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>인스타 · 리빙</div><div class="kv"><b>팔로워</b>8.2만</div><div class="kv"><b>참여율</b>5.4%</div><div class="kv"><b>제안 단가</b>₩60만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 주방 인테리어 톤</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택</button></div>
+    </div>
+    <!-- chosen -->
+    <div class="cand chosen">
+      <div class="top"><span class="av c6">현</span><div><div style="font-weight:500">집밥현이</div><div class="muted" style="font-size:13px">@hyuni.eats</div></div></div>
+      <image-slot id="c4" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>유튜브 · 푸드</div><div class="kv"><b>팔로워</b>17만</div><div class="kv"><b>참여율</b>5.0%</div><div class="kv"><b>제안 단가</b>₩150만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 자취 요리 공감대</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택됨</button></div>
+    </div>
+    <!-- passed -->
+    <div class="cand passed">
+      <div class="top"><span class="av c4">하</span><div><div style="font-weight:500">하나테이블</div><div class="muted" style="font-size:13px">@hana_table</div></div></div>
+      <image-slot id="c5" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>인스타 · 푸드</div><div class="kv"><b>팔로워</b>21만</div><div class="kv"><b>참여율</b>3.9%</div><div class="kv"><b>제안 단가</b>₩120만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 참여율 다소 낮음</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스함</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택</button></div>
+    </div>
+    <!-- neutral -->
+    <div class="cand">
+      <div class="top"><span class="av c5">민</span><div><div style="font-weight:500">리빙민지</div><div class="muted" style="font-size:13px">@minji.living</div></div></div>
+      <image-slot id="c6" class="pic" style="width:auto;height:150px;display:block" shape="rounded" radius="14" placeholder="대표 콘텐츠"></image-slot>
+      <div class="meta"><div class="kv"><b>채널</b>틱톡 · 리빙</div><div class="kv"><b>팔로워</b>34만</div><div class="kv"><b>참여율</b>7.2%</div><div class="kv"><b>제안 단가</b>₩250만</div></div>
+      <div style="padding:0 20px 16px"><span class="cat"># 숏폼 바이럴 강점</span></div>
+      <div class="pick"><button class="pass"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#6a6a72" stroke-width="2" stroke-linecap="round"/></svg>패스</button><button class="sel"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>선택</button></div>
+    </div>
+  </div>
+
+  <div class="subbar">
+    <div class="av-stack"><span class="av c1">유</span><span class="av c3">준</span><span class="av c6">현</span></div>
+    <div><div style="font-weight:500">3명 선택됨 · 예상 비용 ₩630만</div><div class="muted" style="font-size:13px">선택은 자동 저장됩니다. 제출 시 운영팀에 알림이 전송돼요.</div></div>
+    <button class="btn btn-green" style="margin-left:auto;padding:14px 26px;font-size:16px">선택 완료 제출 →</button>
+  </div>
+</div>
+
+<script src="image-slot.js"></script>
+<script>
+document.querySelectorAll('.cand').forEach(function(c){
+  const sel = c.querySelector('.sel'), pass = c.querySelector('.pass');
+  sel.addEventListener('click', function(){ c.classList.add('chosen'); c.classList.remove('passed'); });
+  pass.addEventListener('click', function(){ c.classList.add('passed'); c.classList.remove('chosen'); });
+});
+</script>
+</body>
+</html>

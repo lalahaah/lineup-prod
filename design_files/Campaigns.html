@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 캠페인 칸반</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+.board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; }
+.col { width: 270px; flex: 0 0 270px; display: flex; flex-direction: column; gap: 12px; }
+.col-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 0; }
+.col-head .nm { font-weight: 500; font-size: 15px; }
+.col-head .ct { font-size: 12px; color: var(--muted); background: var(--white); border: 1px solid var(--line-soft); border-radius: 20px; padding: 0 8px; }
+.col-head .dotc { width: 9px; height: 9px; border-radius: 50%; }
+.col-body { display: flex; flex-direction: column; gap: 12px; min-height: 80px; }
+.kcard {
+  background: var(--white); border: 1px solid var(--dark); border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm); padding: 15px; cursor: grab; transition: transform .12s;
+}
+.kcard:hover { transform: translateY(-2px); }
+.kcard .ctag { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .3px; }
+.kcard .kt { font-weight: 500; font-size: 15px; line-height: 1.3; margin: 5px 0 11px; }
+.kcard .kmeta { display: flex; align-items: center; justify-content: space-between; }
+.kcard .bar { margin: 11px 0; }
+.kcard .kfoot { display: flex; align-items: center; justify-content: space-between; margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line-soft); }
+.add-card { border: 1.5px dashed var(--line-soft); border-radius: var(--r-md); padding: 11px; text-align: center; color: var(--muted); font-size: 14px; cursor: pointer; }
+.add-card:hover { border-color: var(--dark); color: var(--dark); }
+.filt { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; padding: 8px 14px; border-radius: 30px; border: 1px solid var(--dark); background: var(--white); cursor: pointer; }
+.chip.on { background: var(--dark); color: var(--white); }
+.chip svg { width: 15px; height: 15px; }
+.seg { display: inline-flex; border: 1px solid var(--dark); border-radius: 10px; overflow: hidden; }
+.seg button { font-family: inherit; font-size: 14px; padding: 8px 16px; border: 0; background: var(--white); cursor: pointer; }
+.seg button.on { background: var(--dark); color: var(--white); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" data-sidebar data-active="camp"></aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="h">
+        <h1>캠페인</h1>
+        <span class="sub">9단계 파이프라인 · 진행 중 8건</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#191A23" stroke-width="1.8"/><path d="M16 16l5 5" stroke="#191A23" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input placeholder="캠페인 검색" />
+      </div>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>새 캠페인</button>
+    </header>
+
+    <div class="content">
+      <div class="filt">
+        <div class="seg"><button class="on">칸반</button><button>리스트</button><button>캘린더</button></div>
+        <span style="width:1px;height:24px;background:var(--line-soft)"></span>
+        <span class="chip on">전체 광고주</span>
+        <span class="chip">CUCKOO</span>
+        <span class="chip">담당: 나</span>
+        <span class="chip"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="#191A23" stroke-width="1.8" stroke-linecap="round"/></svg>필터</span>
+      </div>
+
+      <div class="board">
+
+        <!-- 브리핑 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#c9c9d0"></span><span class="nm">브리핑</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 인덕션 가을 신제품</div>
+              <div class="kmeta"><span class="badge gray">브리핑 작성 중</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c4">하</span></div><span class="dday">D-14</span></div>
+            </div>
+            <div class="add-card">+ 캠페인 추가</div>
+          </div>
+        </div>
+
+        <!-- 서치 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#9fc0ff"></span><span class="nm">서치</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">유한킴벌리</div>
+              <div class="kt">크리넥스 항균 티슈 협찬</div>
+              <div class="bar"><span style="width:40%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">후보 6명 / 목표 15명</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c2">소</span></div><span class="dday">D-9</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 제안 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#ffd27a"></span><span class="nm">제안</span><span class="ct">2</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 에어프라이어 봄 캠페인</div>
+              <div class="kmeta"><span class="badge warn">광고주 검토 중</span></div>
+              <div class="bar"><span style="width:100%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">8명 제안 · 포털 공유됨</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c1">우</span></div><span class="dday warm">D-3</span></div>
+            </div>
+            <div class="kcard">
+              <div class="ctag">CJ올리브영</div>
+              <div class="kt">올리브영 뷰티 픽 11월</div>
+              <div class="kmeta"><span class="badge gray">제안서 준비</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c3">지</span></div><span class="dday">D-8</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 선택 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#ffba3a"></span><span class="nm">선택</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 밥솥 추석 기획전</div>
+              <div class="kmeta"><span class="badge soft">광고주 선택 완료</span></div>
+              <div class="bar"><span style="width:100%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">5명 선택 · 섭외 대기</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c1">우</span></div><span class="dday">D-6</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섭외 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#ffba3a"></span><span class="nm">섭외</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 정수기 인스타 협찬</div>
+              <div class="kmeta"><span class="badge warn">2명 미응답</span></div>
+              <div class="bar"><span style="width:50%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">확정 2 / 대기 2</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c5">유</span><span class="av sm c2">민</span><span class="av sm c4">하</span></div><span class="dday warm">D-3</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 배송 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#9fe0a8"></span><span class="nm">배송</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">유한킴벌리</div>
+              <div class="kt">하기스 위생 캠페인</div>
+              <div class="kmeta"><span class="badge gray">운송장 2건 대기</span></div>
+              <div class="bar"><span style="width:60%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">배송완료 3 / 5</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c2">소</span><span class="av sm c6">현</span></div><span class="dday">D-5</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 검수 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#ff8a7a"></span><span class="nm">검수</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard" style="border-width:1.5px">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 트윈프레셔 신제품 런칭</div>
+              <div class="kmeta"><span class="badge danger">컨펌 대기 D-2</span></div>
+              <div class="bar"><span style="width:60%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">승인 3 / 제출 5</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c1">유</span><span class="av sm c3">준</span><span class="av sm c4">하</span><span class="av sm c5">민</span></div><span class="dday hot">D-2</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 업로드 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#9fe0a8"></span><span class="nm">업로드</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CUCKOO</div>
+              <div class="kt">쿠쿠 비스포크 홈카페</div>
+              <div class="kmeta"><span class="badge soft">게시 완료</span></div>
+              <div class="bar"><span style="width:100%"></span></div>
+              <div class="kmeta"><span class="muted" style="font-size:13px">성과 입력 대기</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c3">지</span></div><span class="dday">D-4</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 정산 -->
+        <div class="col">
+          <div class="col-head"><span class="dotc" style="background:#191a23"></span><span class="nm">정산</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <div class="kcard">
+              <div class="ctag">CJ올리브영</div>
+              <div class="kt">올리브영 뷰티 신제품</div>
+              <div class="kmeta"><span class="badge gray">청구서 발송 대기</span></div>
+              <div class="kmeta" style="margin-top:9px"><span style="font-weight:600">₩8.4M</span><span class="badge dark">수수료 15%</span></div>
+              <div class="kfoot"><div class="av-stack"><span class="av sm c3">지</span></div><span class="dday">D-6</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<script src="sidebar.js"></script>
+</body>
+</html>

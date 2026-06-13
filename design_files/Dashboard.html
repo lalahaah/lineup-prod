@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+.dash-grid { display: grid; grid-template-columns: 1fr 360px; gap: 22px; align-items: start; }
+/* priority queue */
+.pq { display: flex; flex-direction: column; }
+.pq-item { display: flex; align-items: center; gap: 18px; padding: 18px 24px; border-bottom: 1px solid var(--line-soft); }
+.pq-item:last-child { border-bottom: 0; }
+.pq-item .tick { width: 5px; height: 46px; border-radius: 4px; background: var(--green); flex: 0 0 auto; }
+.pq-item .tick.hot { background: #ff6b5e; } .pq-item .tick.warm { background: #ffba3a; }
+.pq-item .info { flex: 1; min-width: 0; }
+.pq-item .info .t { font-weight: 500; font-size: 16px; }
+.pq-item .info .m { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+.pq-item .need { font-size: 13px; }
+/* activity */
+.feed { display: flex; flex-direction: column; gap: 0; }
+.fi { display: flex; gap: 13px; padding: 14px 0; border-bottom: 1px dashed var(--line-soft); }
+.fi:last-child { border-bottom: 0; }
+.fi .fic { width: 32px; height: 32px; border-radius: 9px; background: var(--gray); display: grid; place-items: center; flex: 0 0 auto; }
+.fi .fic svg { width: 16px; height: 16px; }
+.fi .ft { font-size: 14px; line-height: 1.45; }
+.fi .ft b { font-weight: 600; }
+.fi .fmeta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.mini-pipe { display: flex; flex-direction: column; gap: 11px; }
+.mp-row { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.mp-row .mp-l { width: 56px; color: var(--muted); }
+.mp-row .bar { flex: 1; }
+.mp-row .mp-n { width: 22px; text-align: right; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <svg class="mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="#B9FF66"/><path d="M17 6a11 11 0 1 0 0 22" stroke="#191A23" stroke-width="3.4"/><circle cx="17" cy="17" r="4" fill="#191A23"/></svg>
+      RoundFlow
+    </div>
+    <div class="sb-sec">운영</div>
+    <nav class="sb-nav">
+      <a class="sb-link active" href="Dashboard.html"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13h7V4H4v9zM13 20h7v-9h-7v9zM13 4v5h7V4h-7zM4 20h7v-5H4v5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>대시보드</a>
+      <a class="sb-link" href="Campaigns.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="5" height="16" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="10" y="4" width="5" height="11" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="17" y="4" width="4" height="8" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>캠페인<span class="count">8</span></a>
+      <a class="sb-link" href="Influencers.html"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 6.2A3 3 0 0 1 16 12M17 14c2.5.3 4 2.3 4 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>인플루언서 DB</a>
+      <a class="sb-link" href="Campaign Detail.html"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h7M9 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>원고 검수<span class="count">12</span></a>
+      <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-3-2V4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 9h6M9 13h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>정산</a>
+    </nav>
+    <div class="sb-sec">외부 공유 링크</div>
+    <nav class="sb-nav">
+      <a class="sb-link" href="Portal.html"><svg viewBox="0 0 24 24" fill="none"><path d="M10 13a4 4 0 0 0 5.7.3l3-3A4 4 0 0 0 13 4.7l-1.7 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 11a4 4 0 0 0-5.7-.3l-3 3A4 4 0 0 0 11 19.3l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>광고주 포털</a>
+      <a class="sb-link" href="Influencer Link.html"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="3" width="10" height="18" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M11 18h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>인플루언서 링크</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="av">우</div>
+      <div><div class="nm">김현우</div><div class="rl">캠페인 매니저</div></div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <header class="topbar">
+      <div class="h">
+        <h1>대시보드</h1>
+        <span class="sub">안녕하세요 현우님 — 오늘 처리할 일이 <b>5건</b> 있어요</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#191A23" stroke-width="1.8"/><path d="M16 16l5 5" stroke="#191A23" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input placeholder="캠페인·인플루언서 검색" />
+      </div>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>새 캠페인</button>
+    </header>
+
+    <div class="content">
+
+      <!-- STATS -->
+      <div class="stat-row">
+        <div class="stat">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="5" height="16" rx="1.3" stroke="#191A23" stroke-width="1.7"/><rect x="10" y="4" width="5" height="11" rx="1.3" stroke="#191A23" stroke-width="1.7"/><rect x="17" y="4" width="4" height="8" rx="1.3" stroke="#191A23" stroke-width="1.7"/></svg></div>
+          <div class="lbl">진행 중 캠페인</div>
+          <div class="num">8</div>
+          <div class="delta up">▲ 지난주 대비 +2</div>
+        </div>
+        <div class="stat green">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v5l3 2" stroke="#B9FF66" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="8" stroke="#B9FF66" stroke-width="1.8"/></svg></div>
+          <div class="lbl">이번 주 마감</div>
+          <div class="num">3</div>
+          <div class="delta">D-2 최단 · 쿠쿠 트윈프레셔</div>
+        </div>
+        <div class="stat">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="#191A23" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="#191A23" stroke-width="1.7"/></svg></div>
+          <div class="lbl">검수 대기 원고</div>
+          <div class="num">12</div>
+          <div class="delta up">평균 왕복 1.8회 · 목표 2회 이하</div>
+        </div>
+        <div class="stat dark">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-3-2V4z" stroke="#191A23" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
+          <div class="lbl">이번 달 정산 예정</div>
+          <div class="num">₩42.8M</div>
+          <div class="delta up">▲ 청구 완료 6건 / 미발송 2건</div>
+        </div>
+      </div>
+
+      <div class="sec-title">
+        <h2>우선순위 큐</h2>
+        <span class="pill">D-3 이내</span>
+        <div class="spacer"></div>
+        <a class="more" href="Campaigns.html">전체 캠페인 보기 →</a>
+      </div>
+
+      <div class="dash-grid">
+        <!-- LEFT: priority queue -->
+        <div class="card pq">
+          <div class="pq-item">
+            <div class="tick hot"></div>
+            <div class="info">
+              <div class="t">쿠쿠 트윈프레셔 신제품 런칭</div>
+              <div class="m">CUCKOO · 원고 검수 · 인플루언서 5명 중 3명 제출</div>
+            </div>
+            <span class="badge danger">원고 컨펌 대기</span>
+            <span class="dday hot">D-2</span>
+            <button class="btn btn-sm btn-ghost">검수</button>
+          </div>
+          <div class="pq-item">
+            <div class="tick warm"></div>
+            <div class="info">
+              <div class="t">쿠쿠 에어프라이어 봄 캠페인</div>
+              <div class="m">CUCKOO · 제안 · 광고주 포털 후보 검토 중 (8명 제안)</div>
+            </div>
+            <span class="badge warn">광고주 선택 대기</span>
+            <span class="dday warm">D-3</span>
+            <button class="btn btn-sm btn-ghost">포털 열기</button>
+          </div>
+          <div class="pq-item">
+            <div class="tick warm"></div>
+            <div class="info">
+              <div class="t">쿠쿠 정수기 인스타 협찬</div>
+              <div class="m">CUCKOO · 섭외 · 4명 중 2명 미응답 (D-7 리마인더 예약됨)</div>
+            </div>
+            <span class="badge warn">섭외 응답 대기</span>
+            <span class="dday warm">D-3</span>
+            <button class="btn btn-sm btn-ghost">컨택 이력</button>
+          </div>
+          <div class="pq-item">
+            <div class="tick"></div>
+            <div class="info">
+              <div class="t">하기스 위생 캠페인</div>
+              <div class="m">유한킴벌리 · 배송 · 운송장 미입력 2건</div>
+            </div>
+            <span class="badge soft">배송 처리</span>
+            <span class="dday">D-5</span>
+            <button class="btn btn-sm btn-ghost">배송 관리</button>
+          </div>
+          <div class="pq-item">
+            <div class="tick"></div>
+            <div class="info">
+              <div class="t">올리브영 뷰티 신제품</div>
+              <div class="m">CJ올리브영 · 정산 · 청구서 발송 대기 ₩8.4M</div>
+            </div>
+            <span class="badge gray">청구서 발송</span>
+            <span class="dday">D-6</span>
+            <button class="btn btn-sm btn-ghost">정산</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: activity + mini pipeline -->
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div class="card card-pad">
+            <div class="row between" style="margin-bottom:14px">
+              <h2 style="font-size:18px">실시간 활동</h2>
+              <span class="badge soft"><span class="dot" style="background:#1f8a3b"></span> Live</span>
+            </div>
+            <div class="feed">
+              <div class="fi">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#1f8a3b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div><div class="ft"><b>유리쿡</b> 님이 섭외를 <b>수락</b>했어요</div><div class="fmeta">쿠쿠 정수기 · 3분 전</div></div>
+              </div>
+              <div class="fi">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="#191A23" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                <div><div class="ft"><b>먹방준</b> 님이 원고 <b>v2</b>를 제출했어요</div><div class="fmeta">쿠쿠 트윈프레셔 · 21분 전</div></div>
+              </div>
+              <div class="fi">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#191A23" stroke-width="1.6"/><path d="M12 8v5" stroke="#191A23" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+                <div><div class="ft">광고주가 후보 <b>5명을 선택</b>했어요</div><div class="fmeta">CUCKOO · 에어프라이어 · 1시간 전</div></div>
+              </div>
+              <div class="fi">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6l8 6 8-6" stroke="#191A23" stroke-width="1.6" stroke-linecap="round"/><rect x="4" y="5" width="16" height="14" rx="2" stroke="#191A23" stroke-width="1.6"/></svg></div>
+                <div><div class="ft">섭외 이메일 <b>4건 발송</b> 완료</div><div class="fmeta">쿠쿠 정수기 · 2시간 전</div></div>
+              </div>
+              <div class="fi">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#1f8a3b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div><div class="ft"><b>소연홈</b> 님이 배송지를 <b>입력</b>했어요</div><div class="fmeta">하기스 위생 · 3시간 전</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <h2 style="font-size:18px;margin-bottom:16px">파이프라인 현황</h2>
+            <div class="mini-pipe">
+              <div class="mp-row"><span class="mp-l">브리핑</span><span class="bar"><span style="width:25%"></span></span><span class="mp-n">1</span></div>
+              <div class="mp-row"><span class="mp-l">제안</span><span class="bar"><span style="width:50%"></span></span><span class="mp-n">2</span></div>
+              <div class="mp-row"><span class="mp-l">섭외</span><span class="bar"><span style="width:25%"></span></span><span class="mp-n">1</span></div>
+              <div class="mp-row"><span class="mp-l">배송</span><span class="bar"><span style="width:25%"></span></span><span class="mp-n">1</span></div>
+              <div class="mp-row"><span class="mp-l">검수</span><span class="bar"><span style="width:50%"></span></span><span class="mp-n">2</span></div>
+              <div class="mp-row"><span class="mp-l">정산</span><span class="bar"><span style="width:25%"></span></span><span class="mp-n">1</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

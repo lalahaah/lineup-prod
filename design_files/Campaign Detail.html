@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RoundFlow — 캠페인 상세 · 원고 검수</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<script src="image-slot.js"></script>
+<style>
+.back { display:inline-flex; align-items:center; gap:7px; font-size:14px; color:var(--muted); margin-bottom:6px; }
+.back svg { width:16px; height:16px; }
+.stepper-card { padding: 22px 26px; margin-bottom: 22px; }
+.det-grid { display: grid; grid-template-columns: 340px 1fr; gap: 22px; align-items: start; }
+/* influencer list */
+.inf-list { display: flex; flex-direction: column; }
+.inf-row { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line-soft); cursor:pointer; }
+.inf-row:last-child { border-bottom:0; }
+.inf-row.sel { background: var(--green-soft); }
+.inf-row .info { flex:1; min-width:0; }
+.inf-row .nm { font-weight:500; font-size:15px; }
+.inf-row .st { font-size:12.5px; color:var(--muted); margin-top:2px; }
+.ver-tabs { display:flex; gap:8px; margin-bottom:18px; }
+.ver-tab { font-size:14px; padding:8px 16px; border-radius:30px; border:1px solid var(--dark); background:var(--white); cursor:pointer; }
+.ver-tab.on { background:var(--dark); color:#fff; }
+.ver-tab.on .vb { color: var(--green); }
+.review-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px; }
+.draft-area { display:grid; grid-template-columns: 300px 1fr; gap:24px; }
+.cap { font-size:14px; line-height:1.6; }
+.feedback { display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+.fb { display:flex; gap:12px; }
+.fb .av { width:34px; height:34px; }
+.fb .bub { background:var(--gray); border:1px solid var(--line-soft); border-radius:14px; border-top-left-radius:4px; padding:12px 15px; font-size:14px; line-height:1.5; }
+.fb .meta { font-size:12px; color:var(--muted); margin-top:5px; }
+.fb.me .bub { background: var(--green-soft); border-color:#b6e88a; }
+.actions { display:flex; gap:10px; margin-top:22px; padding-top:20px; border-top:1px solid var(--line-soft); }
+.guide-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.kv { font-size:13px; }
+.kv b { display:block; color:var(--muted); font-weight:400; font-size:12px; margin-bottom:2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" data-sidebar data-active="review"></aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="h">
+        <a class="back" href="Campaigns.html"><svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#6a6a72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>캠페인</a>
+        <h1>쿠쿠 트윈프레셔 신제품 런칭</h1>
+      </div>
+      <div class="spacer"></div>
+      <span class="badge dark">CUCKOO</span>
+      <span class="dday hot">마감 D-2</span>
+      <button class="btn btn-ghost">포털 링크 복사</button>
+    </header>
+
+    <div class="content">
+      <!-- stepper -->
+      <div class="card stepper-card">
+        <div class="row between" style="margin-bottom:16px">
+          <div class="row" style="gap:10px"><span class="pill" style="background:var(--green);border-radius:6px;padding:1px 9px;font-size:13px;font-weight:500">현재 단계</span><b style="font-size:16px">원고 검수 · Review</b></div>
+          <span class="muted" style="font-size:13px">담당 김현우 · 인플루언서 5명</span>
+        </div>
+        <div class="steps">
+          <div class="step done"><span class="b">✓</span>브리핑</div><span class="seg"></span>
+          <div class="step done"><span class="b">✓</span>서치</div><span class="seg"></span>
+          <div class="step done"><span class="b">✓</span>제안</div><span class="seg"></span>
+          <div class="step done"><span class="b">✓</span>선택</div><span class="seg"></span>
+          <div class="step done"><span class="b">✓</span>섭외</div><span class="seg"></span>
+          <div class="step done"><span class="b">✓</span>배송</div><span class="seg"></span>
+          <div class="step cur"><span class="b">7</span>검수</div><span class="seg"></span>
+          <div class="step"><span class="b">8</span>업로드</div><span class="seg"></span>
+          <div class="step"><span class="b">9</span>정산</div>
+        </div>
+      </div>
+
+      <div class="det-grid">
+        <!-- LEFT: influencers -->
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div class="card card-pad" style="padding:18px">
+            <div class="row between" style="margin-bottom:6px;padding:0 4px"><h2 style="font-size:17px">참여 인플루언서</h2><span class="badge soft">승인 3 / 5</span></div>
+            <div class="inf-list">
+              <div class="inf-row sel">
+                <span class="av c3">준</span>
+                <div class="info"><div class="nm">먹방준</div><div class="st">원고 v2 검수 대기</div></div>
+                <span class="badge warn">검수 중</span>
+              </div>
+              <div class="inf-row">
+                <span class="av c1">유</span>
+                <div class="info"><div class="nm">유리쿡</div><div class="st">광고주 승인 완료</div></div>
+                <span class="badge soft">승인</span>
+              </div>
+              <div class="inf-row">
+                <span class="av c6">현</span>
+                <div class="info"><div class="nm">집밥현이</div><div class="st">광고주 승인 완료</div></div>
+                <span class="badge soft">승인</span>
+              </div>
+              <div class="inf-row">
+                <span class="av c4">하</span>
+                <div class="info"><div class="nm">하나테이블</div><div class="st">수정 요청 → 재제출 대기</div></div>
+                <span class="badge danger">수정요청</span>
+              </div>
+              <div class="inf-row">
+                <span class="av c5">민</span>
+                <div class="info"><div class="nm">리빙민지</div><div class="st">원고 미제출</div></div>
+                <span class="badge gray">대기</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <h2 style="font-size:16px;margin-bottom:14px">캠페인 가이드</h2>
+            <div class="grid-2" style="gap:14px">
+              <div class="kv"><b>제품</b>쿠쿠 트윈프레셔 IH</div>
+              <div class="kv"><b>채널</b>인스타 릴스 / 유튜브</div>
+              <div class="kv"><b>원고 마감</b>06.08 (D-2)</div>
+              <div class="kv"><b>게시 기간</b>06.10 ~ 06.20</div>
+            </div>
+            <div class="guide-row">
+              <span class="badge gray"># 신혼집밥</span><span class="badge gray"># 쿠쿠트윈프레셔</span><span class="badge gray">필수 태그 2개</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: draft review -->
+        <div class="card card-pad">
+          <div class="review-head">
+            <div class="row"><span class="av c3">준</span><div><div style="font-weight:500;font-size:17px">먹방준 <span class="muted" style="font-weight:400;font-size:14px">@mukbang_jun</span></div><div class="muted" style="font-size:13px">유튜브 · 52만 팔로워</div></div></div>
+            <span class="badge warn">에이전시 검수 중</span>
+          </div>
+
+          <div class="ver-tabs">
+            <span class="ver-tab">v1 <span class="vb muted">반려</span></span>
+            <span class="ver-tab on">v2 <span class="vb">검수 중</span></span>
+            <span class="ver-tab" style="border-style:dashed;color:var(--muted)">+ 재제출 대기</span>
+          </div>
+
+          <div class="draft-area">
+            <div>
+              <image-slot id="draft" style="width:100%;height:300px" shape="rounded" radius="16" placeholder="원고 영상/이미지 미리보기"></image-slot>
+              <div class="row" style="gap:8px;margin-top:12px">
+                <button class="rowbtn" style="font-size:13px;padding:8px 13px;border:1px solid var(--dark);border-radius:9px;background:#fff;cursor:pointer">원본 다운로드</button>
+                <span class="badge gray">04:12 · 142MB</span>
+              </div>
+            </div>
+            <div>
+              <h4 style="font-size:14px;color:var(--muted);font-weight:400;margin-bottom:6px">캡션 원고</h4>
+              <p class="cap">신혼 첫 밥솥으로 쿠쿠 트윈프레셔를 골랐어요 🍚 12분 만에 갓 지은 윤기나는 밥이 완성되는데, 압력이 두 배라 현미도 부드럽게 익어요. 자취·신혼 집들이 메뉴로 강력 추천! #신혼집밥 #쿠쿠트윈프레셔</p>
+
+              <h4 style="font-size:14px;color:var(--muted);font-weight:400;margin:22px 0 6px">피드백 이력</h4>
+              <div class="feedback">
+                <div class="fb me">
+                  <span class="av c1 sm">우</span>
+                  <div><div class="bub">v1 영상에서 제품 모델명이 화면에 노출되지 않았어요. 클로즈업 컷 한 번만 추가 부탁드립니다.</div><div class="meta">김현우 (운영) · 어제 14:20 · 수정 요청</div></div>
+                </div>
+                <div class="fb">
+                  <span class="av c3 sm">준</span>
+                  <div><div class="bub">모델명 클로즈업 추가해서 v2로 재제출했습니다! 확인 부탁드려요.</div><div class="meta">먹방준 · 오늘 09:35 · 재제출</div></div>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="btn btn-green"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#191A23" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>에이전시 승인 → 광고주</button>
+                <button class="btn btn-ghost">수정 요청</button>
+                <button class="btn btn-ghost" style="margin-left:auto">반려</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="sidebar.js"></script>
+</body>
+</html>

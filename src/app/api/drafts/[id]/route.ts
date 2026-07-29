@@ -1,4 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
+import { sendEmail } from '@/lib/email'
+import { InfluencerRevision } from '@/lib/email/templates/InfluencerRevision'
+import { ClientDraftReview } from '@/lib/email/templates/ClientDraftReview'
 
 export interface DraftItem {
   id: string
@@ -140,6 +143,35 @@ export async function PATCH(
       })
     }
 
+    // 이메일 자동 발송 처리
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    if (action === 'revise') {
+      await sendEmail({
+        to: 'mukbang_jun@example.com',
+        subject: '[Lineup] 원고 수정 요청 안내입니다',
+        campaignId: currentDraft.campaign_id,
+        influencerId: currentDraft.influencer_id,
+        react: InfluencerRevision({
+          influencerName: '먹방준',
+          campaignName: '쿠쿠 트윈프레셔 신제품 런칭',
+          feedback: feedback || '수정 사항을 확인 후 재제출 부탁드립니다.',
+          resubmitLink: `${baseUrl}/inf/mock-inf-token-001`,
+        }),
+      })
+    } else if (action === 'approve') {
+      await sendEmail({
+        to: 'cuckoo_brand@example.com',
+        subject: '[CUCKOO] 원고 검수 완료 및 컨펌 요청드립니다',
+        campaignId: currentDraft.campaign_id,
+        react: ClientDraftReview({
+          clientName: 'CUCKOO',
+          campaignName: '쿠쿠 트윈프레셔 신제품 런칭',
+          draftCount: 3,
+          portalLink: `${baseUrl}/portal/mock-portal-token-001/drafts`,
+        }),
+      })
+    }
+
     const updatedDraft: DraftItem = {
       ...currentDraft,
       status: newStatus,
@@ -155,3 +187,4 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update draft' }, { status: 500 })
   }
 }
+

@@ -109,3 +109,25 @@ export interface Draft {
   hashtags: string | null
   scheduled_date: string | null
 }
+
+export interface InfluencerItem {
+  id: string
+  created_at?: string
+  name: string
+  handle: string
+  avatar_initial: string
+  avatar_color_class: string
+  channel: 'instagram' | 'youtube' | 'tiktok' | string
+  channel_label: string
+  category: string
+  followers: number
+  followers_formatted: string
+  engagement_rate: number
+  engagement_rate_formatted: string
+  fee: number
+  fee_formatted: string
+  status: 'candidate' | 'uncontacted' | 'blacklisted' | string
+  status_label: string
+  is_blacklisted: boolean
+}
+

@@ -6,17 +6,30 @@ import { useEffect, useState } from 'react'
 
 interface HeaderProps {
   title: string
-  subTitle?: string
+  subTitle?: React.ReactNode
+  searchPlaceholder?: string
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  actionButton?: React.ReactNode
 }
 
-export function Header({ title, subTitle }: HeaderProps) {
+export function Header({
+  title,
+  subTitle,
+  searchPlaceholder = '캠페인·인플루언서 검색',
+  searchValue,
+  onSearchChange,
+  actionButton,
+}: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
   const [userName, setUserName] = useState<string>('현우')
 
   useEffect(() => {
     async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (user) {
         const name = user.user_metadata?.name || user.email?.split('@')[0] || '사용자'
         setUserName(name)
@@ -30,14 +43,14 @@ export function Header({ title, subTitle }: HeaderProps) {
   }
 
   return (
-    <header 
+    <header
       className="topbar select-none"
-      style={{ 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 20, 
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
         background: 'var(--gray)',
-        padding: '26px 40px 18px'
+        padding: '26px 40px 18px',
       }}
     >
       <div className="h">
@@ -51,39 +64,48 @@ export function Header({ title, subTitle }: HeaderProps) {
         </span>
       </div>
       <div className="spacer"></div>
-      
+
       {/* 검색창 */}
-      <div 
+      <div
         className="search"
         style={{
           background: 'var(--white)',
           border: '1px solid var(--dark)',
-          borderRadius: '12px'
+          borderRadius: '12px',
         }}
       >
         <svg viewBox="0 0 24 24" fill="none">
           <circle cx="11" cy="11" r="7" stroke="var(--dark)" strokeWidth="1.8" />
           <path d="M16 16l5 5" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        <input placeholder="캠페인·인플루언서 검색" className="font-sans" />
+        <input
+          placeholder={searchPlaceholder}
+          className="font-sans"
+          value={searchValue ?? ''}
+          onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+        />
       </div>
 
-      {/* 새 캠페인 버튼 */}
-      <button 
-        onClick={handleCreateCampaign} 
-        className="btn cursor-pointer font-sans"
-        style={{
-          background: 'var(--dark)',
-          color: 'var(--white)',
-          borderRadius: '12px',
-          border: '1px solid var(--dark)'
-        }}
-      >
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        새 캠페인
-      </button>
+      {/* 액션 버튼 */}
+      {actionButton ? (
+        actionButton
+      ) : (
+        <button
+          onClick={handleCreateCampaign}
+          className="btn cursor-pointer font-sans"
+          style={{
+            background: 'var(--dark)',
+            color: 'var(--white)',
+            borderRadius: '12px',
+            border: '1px solid var(--dark)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          새 캠페인
+        </button>
+      )}
     </header>
   )
 }

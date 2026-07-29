@@ -271,7 +271,13 @@ type DraftStatus =
 1. TASKS.md에서 현재 태스크 번호와 범위 확인
 2. **할당된 태스크만 구현. 다음 태스크 자동 진행 절대 금지**
 3. 태스크 완료 후: "TASK-XXX 완료. 다음 태스크를 지시해주세요." 출력 후 정지
-4. 완료 후 커밋 & 푸시 (.env.local 커밋 금지)
+4. 완료 후 반드시 커밋 & 푸시
+   - git add .
+   - git commit -m "feat: TASK-XXX 작업내용 요약"
+   - git push origin main
+   - .env.local 절대 커밋 금지
+   - node_modules 절대 커밋 금지
+   - .gitignore 확인 후 진행
 
 ---
 

@@ -162,12 +162,12 @@ export default function PortalPage({ params }: PageProps) {
           >
             후보 검토 <span className="n">{candidateCount}</span>
           </span>
-          <span
-            className={`ptab ${activeTab === 'draft' ? 'on' : ''}`}
-            onClick={() => setActiveTab('draft')}
+          <a
+            href={`/portal/${token}/drafts`}
+            className="ptab text-decoration-none"
           >
-            원고 컨펌 <span className="n">대기</span>
-          </span>
+            원고 컨펌 <span className="n">3</span>
+          </a>
           <span
             className={`ptab ${activeTab === 'report' ? 'on' : ''}`}
             onClick={() => setActiveTab('report')}
@@ -175,6 +175,7 @@ export default function PortalPage({ params }: PageProps) {
             성과 리포트
           </span>
         </div>
+
 
         {/* Candidate Grid */}
         {activeTab === 'review' ? (

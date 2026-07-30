@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Logo } from '@/components/shared/Logo'
 import { createClient } from '@/lib/supabase/client'
 import { useTransition } from 'react'
+import { Building2 } from 'lucide-react'
 
 interface SidebarProps {
   className?: string
@@ -57,6 +58,11 @@ export function Sidebar({ className }: SidebarProps) {
           <path d="M16 6.2A3 3 0 0 1 16 12M17 14c2.5.3 4 2.3 4 4.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
         </svg>
       )
+    },
+    {
+      name: '광고주',
+      href: '/clients',
+      icon: <Building2 style={{ width: 20, height: 20 }} strokeWidth={1.7} />
     },
     {
       name: '원고 검수',

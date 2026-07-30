@@ -4,6 +4,8 @@ import * as React from 'react'
 import Link from 'next/link'
 
 export interface PriorityItem {
+  campaign_id?: string
+  portal_token?: string | null
   title: string
   sub: string
   badge: string
@@ -16,11 +18,56 @@ export interface PriorityItem {
 export function PriorityQueue() {
   // TODO: 실시간 DB 연동 필요. 현재는 Dashboard.html 목업과 동일하게 5개 데이터 하드코딩.
   const mockItems: PriorityItem[] = [
-    { title: '쿠쿠 트윈프레셔 신제품 런칭', sub: 'CUCKOO · 원고 검수 · 인플루언서 5명 중 3명 제출', badge: '원고 컨펌 대기', badgeType: 'danger', days: 2, action: '검수' },
-    { title: '쿠쿠 에어프라이어 봄 캠페인', sub: 'CUCKOO · 제안 · 광고주 포털 후보 검토 중 (8명 제안)', badge: '광고주 선택 대기', badgeType: 'warn', days: 3, action: '포털 열기' },
-    { title: '쿠쿠 정수기 인스타 협찬', sub: 'CUCKOO · 섭외 · 4명 중 2명 미응답 (D-7 리마인더 예약됨)', badge: '섭외 응답 대기', badgeType: 'warn', days: 3, action: '컨택 이력' },
-    { title: '하기스 위생 캠페인', sub: '유한킴벌리 · 배송 · 운송장 미입력 2건', badge: '배송 처리', badgeType: 'soft', days: 5, action: '배송 관리' },
-    { title: '올리브영 뷰티 신제품', sub: 'CJ올리브영 · 정산 · 청구서 발송 대기 ₩8.4M', badge: '청구서 발송', badgeType: 'default', days: 6, action: '정산' },
+    {
+      campaign_id: 'camp-1',
+      portal_token: 'mock-portal-token-001',
+      title: '쿠쿠 트윈프레셔 신제품 런칭',
+      sub: 'CUCKOO · 원고 검수 · 인플루언서 5명 중 3명 제출',
+      badge: '원고 컨펌 대기',
+      badgeType: 'danger',
+      days: 2,
+      action: '검수',
+    },
+    {
+      campaign_id: 'camp-3',
+      portal_token: 'mock-portal-token-002',
+      title: '쿠쿠 에어프라이어 봄 캠페인',
+      sub: 'CUCKOO · 제안 · 광고주 포털 후보 검토 중 (8명 제안)',
+      badge: '광고주 선택 대기',
+      badgeType: 'warn',
+      days: 3,
+      action: '포털 열기',
+    },
+    {
+      campaign_id: 'camp-5',
+      portal_token: null,
+      title: '쿠쿠 정수기 인스타 협찬',
+      sub: 'CUCKOO · 섭외 · 4명 중 2명 미응답 (D-7 리마인더 예약됨)',
+      badge: '섭외 응답 대기',
+      badgeType: 'warn',
+      days: 3,
+      action: '컨택 이력',
+    },
+    {
+      campaign_id: 'camp-6',
+      portal_token: null,
+      title: '하기스 위생 캠페인',
+      sub: '유한킴벌리 · 배송 · 운송장 미입력 2건',
+      badge: '배송 처리',
+      badgeType: 'soft',
+      days: 5,
+      action: '배송 관리',
+    },
+    {
+      campaign_id: 'camp-9',
+      portal_token: null,
+      title: '올리브영 뷰티 신제품',
+      sub: 'CJ올리브영 · 정산 · 청구서 발송 대기 ₩8.4M',
+      badge: '청구서 발송',
+      badgeType: 'default',
+      days: 6,
+      action: '정산',
+    },
   ]
 
   const getTickStyle = (days: number): React.CSSProperties => {
@@ -65,6 +112,33 @@ export function PriorityQueue() {
     return 'badge gray'
   }
 
+  const getActionHref = (item: PriorityItem): string => {
+    if (item.url) return item.url
+    const cid = item.campaign_id || ''
+    switch (item.action) {
+      case '검수':
+        return `/campaigns/${cid}/drafts`
+      case '포털 열기':
+        return item.portal_token ? `/portal/${item.portal_token}` : `/campaigns/${cid}`
+      case '컨택 이력':
+        return `/campaigns/${cid}/influencers`
+      case '배송 관리':
+        return `/campaigns/${cid}/shipping`
+      case '정산':
+        return `/campaigns/${cid}/billing`
+      default:
+        return item.portal_token ? `/portal/${item.portal_token}` : `/campaigns/${cid}`
+    }
+  }
+
+  const handleCopyPortalLink = (item: PriorityItem) => {
+    const path = item.portal_token ? `/portal/${item.portal_token}` : `/campaigns/${item.campaign_id || ''}`
+    const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(fullUrl).catch(() => {})
+    }
+  }
+
   return (
     <div className="card pq">
       {mockItems.map((item, index) => {
@@ -97,29 +171,26 @@ export function PriorityQueue() {
               D-{item.days}
             </span>
             
-            <Link 
-              href={item.url || '#'} 
-              className="btn btn-sm btn-ghost cursor-pointer"
-              style={{
-                background: 'white',
-                border: '1px solid var(--dark)',
-                borderRadius: 9,
-                padding: '7px 13px',
-                fontSize: 13,
-                color: 'var(--dark)',
-                fontWeight: 500,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 'none'
-              }}
-            >
-              {item.action}
-            </Link>
+            {item.action === '포털 링크 복사' ? (
+              <button
+                type="button"
+                onClick={() => handleCopyPortalLink(item)}
+                className="rowbtn"
+              >
+                {item.action}
+              </button>
+            ) : (
+              <Link 
+                href={getActionHref(item)} 
+                className="rowbtn"
+              >
+                {item.action}
+              </Link>
+            )}
           </div>
         )
       })}
     </div>
   )
 }
+

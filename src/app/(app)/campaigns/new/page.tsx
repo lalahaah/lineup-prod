@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Header } from '@/components/layout/Header'
 
-const CLIENT_OPTIONS = ['CUCKOO', '유한킴벌리', 'CJ올리브영']
 const ASSIGNEE_OPTIONS = ['김현우', '이소연', '박지수']
 const GOAL_OPTIONS = [
   { id: 'awareness', label: '브랜드 인지' },
@@ -19,6 +18,7 @@ const CATEGORY_OPTIONS = ['푸드', '뷰티', '패션', '라이프', '테크', '
 export default function NewCampaignPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [clientOptions, setClientOptions] = useState<string[]>(['CUCKOO', '유한킴벌리', 'CJ올리브영'])
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -38,6 +38,29 @@ export default function NewCampaignPage() {
     assignee: '김현우',
     budget: '',
   })
+
+  useEffect(() => {
+    async function loadClients() {
+      try {
+        const res = await fetch('/api/clients')
+        if (res.ok) {
+          const json = await res.json()
+          const list = Array.isArray(json) ? json : json.data || []
+          if (list.length > 0) {
+            const names = list.map((c: any) => c.name)
+            setClientOptions(names)
+            setFormData((prev) => ({
+              ...prev,
+              client_name: prev.client_name && names.includes(prev.client_name) ? prev.client_name : names[0]
+            }))
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching clients for dropdown:', err)
+      }
+    }
+    loadClients()
+  }, [])
 
   const handleChannelToggle = (channel: string) => {
     if (formData.channels.includes(channel)) {
@@ -187,7 +210,7 @@ export default function NewCampaignPage() {
                   value={formData.client_name}
                   onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
                 >
-                  {CLIENT_OPTIONS.map((c) => (
+                  {clientOptions.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

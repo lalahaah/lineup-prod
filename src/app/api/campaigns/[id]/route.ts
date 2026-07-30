@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
 import type { CampaignStage } from '@/types'
 
@@ -29,7 +29,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: campaign, error } = await supabase
       .from('campaigns')
@@ -80,7 +80,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const body = await request.json()
 
     // 1. 기존 캠페인 정보 조회

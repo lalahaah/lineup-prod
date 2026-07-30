@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export interface CampaignInfluencerDetail {
   id: string
@@ -36,7 +36,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: campaignInfluencers, error } = await supabase
       .from('campaign_influencers')
@@ -90,7 +90,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const body = await request.json()
 
     const { influencer_id, proposed_fee, agency_comment } = body

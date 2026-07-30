@@ -11,12 +11,15 @@ export default async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // 외부 접근 경로, 마케팅 페이지, 로그인 페이지는 인증 불필요
+  // 외부 접근 경로, API 경로, 마케팅 페이지, 로그인 페이지는 인증 불필요
   if (
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/portal/') ||
     pathname.startsWith('/inf/') ||
+    pathname.startsWith('/auth/') ||
     pathname === '/' ||
-    pathname.startsWith('/auth/')
+    pathname.startsWith('/_next/') ||
+    pathname === '/favicon.ico'
   ) {
     return response
   }

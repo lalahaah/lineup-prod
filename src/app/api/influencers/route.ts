@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
 
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const excludeBlacklist = excludeBlacklistParam === null ? true : excludeBlacklistParam === 'true'
 
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     let query = supabase
       .from('influencers')
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const body = await request.json()
 
     const { name, handle, channel, category, followers, fee, email, phone } = body

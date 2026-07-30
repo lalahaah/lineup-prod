@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: client, error } = await supabase
       .from('clients')
@@ -51,7 +51,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const body = await request.json()
 
     const { data: updated, error } = await supabase

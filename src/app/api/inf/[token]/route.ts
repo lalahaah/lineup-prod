@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export interface InfTokenData {
   token: string
@@ -10,7 +11,7 @@ export interface InfTokenData {
   content_deadline: string
   post_period: string
   required_tags: string
-  status: 'candidate' | 'outreached' | 'confirmed' | 'rejected'
+  status: 'candidate' | 'outreached' | 'confirmed' | 'rejected' | string
   shipping_address?: {
     name?: string
     phone?: string
@@ -19,36 +20,57 @@ export interface InfTokenData {
   }
 }
 
-const MOCK_INF_TOKEN_DATA: InfTokenData = {
-  token: 'mock-inf-token-001',
-  influencer_name: '유리쿡',
-  campaign_title: '쿠쿠 트윈프레셔 신제품 런칭',
-  client_name: 'CUCKOO',
-  channel_label: '인스타 릴스',
-  proposed_fee_formatted: '₩800,000',
-  content_deadline: '06.08',
-  post_period: '06.10 ~ 06.20',
-  required_tags: '#신혼집밥 외 1',
-  status: 'outreached',
-  shipping_address: {
-    name: '',
-    phone: '',
-    address: '',
-    detail_address: '',
-  },
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
-
-  // RLS 우회 데이터 반환
-  const data = {
-    ...MOCK_INF_TOKEN_DATA,
-    token,
+  if (!token) {
+    return NextResponse.json({ error: 'Token is required' }, { status: 404 })
   }
 
-  return NextResponse.json(data)
+  try {
+    const supabase = createServiceClient()
+
+    // campaign_influencers에서 access_token으로 조회 + campaigns, clients, influencers JOIN
+    const { data: ci, error } = await supabase
+      .from('campaign_influencers')
+      .select('*, campaigns(*, clients(*)), influencers(*)')
+      .eq('access_token', token)
+      .single()
+
+    if (error || !ci) {
+      return NextResponse.json({ error: 'Influencer link not found' }, { status: 404 })
+    }
+
+    const campaign = ci.campaigns as any || {}
+    const client = campaign.clients as any || {}
+    const influencer = ci.influencers as any || {}
+
+    const addressObj = typeof ci.shipping_address === 'object' && ci.shipping_address !== null ? ci.shipping_address : {}
+
+    const formatted: InfTokenData = {
+      token,
+      influencer_name: influencer.name || '인플루언서',
+      campaign_title: campaign.name || '캠페인',
+      client_name: client.name || '광고주',
+      channel_label: influencer.primary_channel === 'youtube' ? '유튜브' : influencer.primary_channel === 'tiktok' ? '틱톡' : '인스타 릴스',
+      proposed_fee_formatted: `₩${((ci.proposed_fee || 500000) / 10000).toFixed(0)}만`,
+      content_deadline: campaign.content_deadline || '',
+      post_period: campaign.upload_deadline ? `${campaign.content_deadline || ''} ~ ${campaign.upload_deadline}` : '',
+      required_tags: campaign.brief || '#제품협찬 #가이드참조',
+      status: ci.status,
+      shipping_address: addressObj as any
+    }
+
+    return NextResponse.json({
+      ...formatted,
+      campaign_id: ci.campaign_id,
+      influencer_id: ci.influencer_id,
+      raw_data: ci
+    })
+  } catch (error: any) {
+    console.error('Error fetching inf token data:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+  }
 }

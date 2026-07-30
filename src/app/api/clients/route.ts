@@ -1,46 +1,66 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { MOCK_CLIENTS, ClientData } from '@/lib/clientsStore'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient()
+
+    const { data: clients, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     return NextResponse.json({
-      data: MOCK_CLIENTS,
-      total: MOCK_CLIENTS.length
+      data: clients || [],
+      total: (clients || []).length
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching clients:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
     const body = await request.json()
+
     const { name, industry, contact_name, contact_email, contact_phone, commission_rate, notes } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: '회사명은 필수입니다.' }, { status: 400 })
     }
 
-    const newClient: ClientData = {
-      id: `client-${Date.now()}`,
+    const insertData = {
       name: name.trim(),
       industry: industry?.trim() || '기타',
-      contact_name: contact_name?.trim() || '-',
-      contact_email: contact_email?.trim() || '-',
-      contact_phone: contact_phone?.trim() || '-',
+      contact_name: contact_name?.trim() || null,
+      contact_email: contact_email?.trim() || null,
+      contact_phone: contact_phone?.trim() || null,
       commission_rate: typeof commission_rate === 'number' ? commission_rate : parseFloat(commission_rate || '0.15'),
       is_active: true,
-      notes: notes?.trim() || '',
-      campaign_count: 0,
-      created_at: new Date().toISOString().split('T')[0]
+      notes: notes?.trim() || null,
+      plan_type: 'starter'
     }
 
-    MOCK_CLIENTS.unshift(newClient)
+    const { data: newClient, error } = await supabase
+      .from('clients')
+      .insert(insertData)
+      .select()
+      .single()
+
+    if (error || !newClient) {
+      return NextResponse.json({ error: error?.message || 'Failed to create client' }, { status: 500 })
+    }
 
     return NextResponse.json(newClient, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating client:', error)
-    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to create client' }, { status: 500 })
   }
 }

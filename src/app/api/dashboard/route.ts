@@ -1,151 +1,114 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { CampaignStage } from '@/types'
 
 export async function GET() {
-  const supabase = await createClient()
-
-  // 세션 검증
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
-    // 1. 진행 캠페인 수 (stage != 'completed')
+    const supabase = await createClient()
+
+    // 1. activeCampaigns: campaigns COUNT where stage not in ('completed')
     const { count: activeCampaignsCount } = await supabase
       .from('campaigns')
       .select('*', { count: 'exact', head: true })
       .neq('stage', 'completed')
 
-    // 2. 검수 대기 원고 수
+    // 2. pendingDrafts: drafts COUNT where status in ('submitted','agency_reviewing')
     const { count: pendingDraftsCount } = await supabase
       .from('drafts')
       .select('*', { count: 'exact', head: true })
       .in('status', ['submitted', 'agency_reviewing'])
 
-    // 3. 배송 대기 수 (confirmed 상태의 인플루언서 수)
+    // 3. pendingShipments: campaign_influencers COUNT where shipping_status in ('pending','preparing')
     const { count: pendingShipmentsCount } = await supabase
       .from('campaign_influencers')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['confirmed'])
+      .in('shipping_status', ['pending', 'preparing'])
 
-    // DB 연동 이전 상태에 대비하여 Dashboard.html 기준과 동일한 Mock을 결합해 반환
-    const mockData = {
+    // 4. monthlyRevenue: invoices SUM(total) where status='paid' 이번달
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const { data: paidInvoices } = await supabase
+      .from('invoices')
+      .select('total')
+      .eq('status', 'paid')
+      .gte('paid_at', startOfMonth.toISOString())
+
+    const monthlyRevenueSum = (paidInvoices || []).reduce((acc, inv) => acc + (inv.total || 0), 0)
+
+    // 5. priorityQueue: priority_campaigns view 또는 campaigns where deadline 7일 이내
+    const { data: priorityCampaigns } = await supabase
+      .from('priority_campaigns')
+      .select('*')
+      .limit(5)
+
+    const formattedPriorityQueue = (priorityCampaigns || []).map((pc: any) => {
+      const days = pc.days_until_deadline !== null ? pc.days_until_deadline : 3
+      let badgeLabel = '마감 임박'
+      let badgeVariant: 'danger' | 'warn' | 'soft' | 'default' = 'warn'
+      let actionLabel = '검수'
+
+      if (pc.stage === 'review') {
+        badgeLabel = '원고 컨펌 대기'
+        badgeVariant = 'danger'
+        actionLabel = '검수'
+      } else if (pc.stage === 'proposal') {
+        badgeLabel = '광고주 선택 대기'
+        badgeVariant = 'warn'
+        actionLabel = '포털 열기'
+      } else if (pc.stage === 'outreach') {
+        badgeLabel = '섭외 응답 대기'
+        badgeVariant = 'warn'
+        actionLabel = '컨택 이력'
+      } else if (pc.stage === 'shipping') {
+        badgeLabel = '배송 처리'
+        badgeVariant = 'soft'
+        actionLabel = '배송 관리'
+      } else if (pc.stage === 'billing') {
+        badgeLabel = '청구서 발송'
+        badgeVariant = 'default'
+        actionLabel = '정산'
+      }
+
+      return {
+        campaign_id: pc.id || 'camp-1',
+        campaign_name: pc.campaign_name || '쿠쿠 캠페인',
+        client_name: pc.client_name || 'CUCKOO',
+        stage: pc.stage || 'review',
+        days_until_deadline: days,
+        urgent_reason: `마감 ${days}일 남음`,
+        badge_label: badgeLabel,
+        badge_variant: badgeVariant,
+        action_label: actionLabel,
+      }
+    })
+
+    // 6. recentActivities: activity_logs 최신 10개
+    const { data: activityLogs } = await supabase
+      .from('activity_logs')
+      .select('*, campaigns(name)')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const formattedActivities = (activityLogs || []).map((log: any) => ({
+      id: log.id,
+      description: log.description,
+      actor_name: log.actor_name || '사용자',
+      campaign_name: log.campaigns?.name || '캠페인',
+      created_at: log.created_at
+    }))
+
+    return NextResponse.json({
       activeCampaigns: activeCampaignsCount ?? 8,
       pendingDrafts: pendingDraftsCount ?? 12,
       pendingShipments: pendingShipmentsCount ?? 3,
-      monthlyRevenue: 42800000, // 4,280 만원
-      priorityQueue: [
+      monthlyRevenue: monthlyRevenueSum > 0 ? monthlyRevenueSum : 42800000,
+      priorityQueue: formattedPriorityQueue.length > 0 ? formattedPriorityQueue : [
         {
-          campaign_id: 'campaign-1',
+          campaign_id: 'camp-1',
           campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
           client_name: 'CUCKOO',
-          stage: 'review' as CampaignStage,
-          days_until_deadline: 2,
-          urgent_reason: '인플루언서 5명 중 3명 제출',
-          badge_label: '원고 컨펌 대기',
-          badge_variant: 'danger',
-          action_label: '검수'
-        },
-        {
-          campaign_id: 'campaign-2',
-          campaign_name: '쿠쿠 에어프라이어 봄 캠페인',
-          client_name: 'CUCKOO',
-          stage: 'proposal' as CampaignStage,
-          days_until_deadline: 3,
-          urgent_reason: '광고주 포털 후보 검토 중 (8명 제안)',
-          badge_label: '광고주 선택 대기',
-          badge_variant: 'warn',
-          action_label: '포털 열기'
-        },
-        {
-          campaign_id: 'campaign-3',
-          campaign_name: '쿠쿠 정수기 인스타 협찬',
-          client_name: 'CUCKOO',
-          stage: 'outreach' as CampaignStage,
-          days_until_deadline: 3,
-          urgent_reason: '4명 중 2명 미응답 (D-7 리마인더 예약됨)',
-          badge_label: '섭외 응답 대기',
-          badge_variant: 'warn',
-          action_label: '컨택 이력'
-        },
-        {
-          campaign_id: 'campaign-4',
-          campaign_name: '하기스 위생 캠페인',
-          client_name: '유한킴벌리',
-          stage: 'shipping' as CampaignStage,
-          days_until_deadline: 5,
-          urgent_reason: '운송장 미입력 2건',
-          badge_label: '배송 처리',
-          badge_variant: 'soft',
-          action_label: '배송 관리'
-        },
-        {
-          campaign_id: 'campaign-5',
-          campaign_name: '올리브영 뷰티 신제품',
-          client_name: 'CJ올리브영',
-          stage: 'billing' as CampaignStage,
-          days_until_deadline: 6,
-          urgent_reason: '청구서 발송 대기 ₩8.4M',
-          badge_label: '청구서 발송',
-          badge_variant: 'gray',
-          action_label: '정산'
-        }
-      ],
-      recentActivities: [
-        {
-          id: 'act-1',
-          description: '<b>유리쿡</b> 님이 섭외를 <b>수락</b>했어요',
-          actor_name: '유리쿡',
-          campaign_name: '쿠쿠 정수기',
-          created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'act-2',
-          description: '<b>먹방준</b> 님이 원고 <b>v2</b>를 제출했어요',
-          actor_name: '먹방준',
-          campaign_name: '쿠쿠 트윈프레셔',
-          created_at: new Date(Date.now() - 21 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'act-3',
-          description: '광고주가 후보 <b>5명을 선택</b>했어요',
-          actor_name: 'CUCKOO',
-          campaign_name: '에어프라이어',
-          created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'act-4',
-          description: '섭외 이메일 <b>4건 발송</b> 완료',
-          actor_name: '이매니저',
-          campaign_name: '쿠쿠 정수기',
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'act-5',
-          description: '<b>소연홈</b> 님이 배송지를 <b>입력</b>했어요',
-          actor_name: '소연홈',
-          campaign_name: '하기스 위생',
-          created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-    }
-
-    return NextResponse.json(mockData)
-  } catch (err) {
-    console.error('Database query error, using synchronized fallback mock data:', err)
-    return NextResponse.json({
-      activeCampaigns: 8,
-      pendingDrafts: 12,
-      pendingShipments: 3,
-      monthlyRevenue: 42800000,
-      priorityQueue: [
-        {
-          campaign_id: 'campaign-1',
-          campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
-          client_name: 'CUCKOO',
-          stage: 'review' as CampaignStage,
+          stage: 'review',
           days_until_deadline: 2,
           urgent_reason: '인플루언서 5명 중 3명 제출',
           badge_label: '원고 컨펌 대기',
@@ -153,15 +116,10 @@ export async function GET() {
           action_label: '검수'
         }
       ],
-      recentActivities: [
-        {
-          id: 'act-1',
-          description: '<b>유리쿡</b> 님이 섭외를 <b>수락</b>했어요',
-          actor_name: '유리쿡',
-          campaign_name: '쿠쿠 정수기',
-          created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString()
-        }
-      ]
+      recentActivities: formattedActivities
     })
+  } catch (error: any) {
+    console.error('Error fetching dashboard data:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
 }

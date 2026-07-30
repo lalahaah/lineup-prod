@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { MOCK_CLIENTS, MOCK_CLIENT_CAMPAIGNS } from '@/lib/clientsStore'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -7,21 +7,41 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    const client = MOCK_CLIENTS.find((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase())
+    const supabase = await createClient()
 
-    if (!client) {
+    const { data: client, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !client) {
       return NextResponse.json({ error: '광고주를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    const campaigns = MOCK_CLIENT_CAMPAIGNS[client.id] || []
+    // 해당 광고주의 캠페인 이력 조회
+    const { data: campaigns } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+
+    const formattedCampaigns = (campaigns || []).map((c: any) => ({
+      id: c.id,
+      title: c.name,
+      stage: c.stage,
+      stage_label: c.stage,
+      progress_days: `진행중`,
+      amount: c.budget ? `₩${c.budget.toLocaleString()}` : '-'
+    }))
 
     return NextResponse.json({
       data: client,
-      campaigns
+      campaigns: formattedCampaigns
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching client detail:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
 }
 
@@ -31,26 +51,23 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params
-    const index = MOCK_CLIENTS.findIndex((c) => c.id === id || c.name.toLowerCase() === id.toLowerCase())
-
-    if (index === -1) {
-      return NextResponse.json({ error: '광고주를 찾을 수 없습니다.' }, { status: 404 })
-    }
-
+    const supabase = await createClient()
     const body = await request.json()
-    const target = MOCK_CLIENTS[index]
 
-    const updated = {
-      ...target,
-      ...body,
-      id: target.id
+    const { data: updated, error } = await supabase
+      .from('clients')
+      .update(body)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error || !updated) {
+      return NextResponse.json({ error: error?.message || 'Failed to update client' }, { status: 500 })
     }
-
-    MOCK_CLIENTS[index] = updated
 
     return NextResponse.json({ data: updated })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating client:', error)
-    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to update client' }, { status: 500 })
   }
 }

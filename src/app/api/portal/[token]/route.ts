@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export interface PortalCandidate {
   id: string
@@ -13,7 +14,7 @@ export interface PortalCandidate {
   fee: number
   fee_formatted: string
   tag: string
-  status: 'chosen' | 'passed' | 'neutral'
+  status: 'chosen' | 'passed' | 'neutral' | string
 }
 
 export interface PortalData {
@@ -24,107 +25,8 @@ export interface PortalData {
   total_budget_formatted: string
   deadline: string
   candidates: PortalCandidate[]
-}
-
-const MOCK_PORTAL_DATA: PortalData = {
-  token: 'mock-portal-token-001',
-  campaign_title: '쿠쿠 에어프라이어 봄 캠페인',
-  client_name: 'CUCKOO',
-  candidate_count: 8,
-  total_budget_formatted: '₩12,000,000',
-  deadline: '06.09 (D-3)',
-  candidates: [
-    {
-      id: 'c1',
-      name: '유리쿡',
-      handle: '@yuri_cooks',
-      avatar_initial: '유',
-      avatar_color_class: 'c1',
-      channel: '인스타',
-      category: '푸드',
-      followers: '12.5만',
-      engagement: '4.8%',
-      fee: 800000,
-      fee_formatted: '₩80만',
-      tag: '# 신혼집밥 콘텐츠 강점',
-      status: 'chosen',
-    },
-    {
-      id: 'c2',
-      name: '먹방준',
-      handle: '@mukbang_jun',
-      avatar_initial: '준',
-      avatar_color_class: 'c3',
-      channel: '유튜브',
-      category: '푸드',
-      followers: '52만',
-      engagement: '6.1%',
-      fee: 4000000,
-      fee_formatted: '₩400만',
-      tag: '# 조리 리뷰 도달 강점',
-      status: 'chosen',
-    },
-    {
-      id: 'c3',
-      name: '소연홈',
-      handle: '@soyeon.home',
-      avatar_initial: '소',
-      avatar_color_class: 'c2',
-      channel: '인스타',
-      category: '리빙',
-      followers: '8.2만',
-      engagement: '5.4%',
-      fee: 600000,
-      fee_formatted: '₩60만',
-      tag: '# 주방 인테리어 톤',
-      status: 'neutral',
-    },
-    {
-      id: 'c4',
-      name: '집밥현이',
-      handle: '@hyuni.eats',
-      avatar_initial: '현',
-      avatar_color_class: 'c6',
-      channel: '유튜브',
-      category: '푸드',
-      followers: '17만',
-      engagement: '5.0%',
-      fee: 1500000,
-      fee_formatted: '₩150만',
-      tag: '# 자취 요리 공감대',
-      status: 'chosen',
-    },
-    {
-      id: 'c5',
-      name: '하나테이블',
-      handle: '@hana_table',
-      avatar_initial: '하',
-      avatar_color_class: 'c4',
-      channel: '인스타',
-      category: '푸드',
-      followers: '21만',
-      engagement: '3.9%',
-      fee: 1200000,
-      fee_formatted: '₩120만',
-      tag: '# 참여율 다소 낮음',
-      status: 'passed',
-    },
-    {
-      id: 'c6',
-      name: '리빙민지',
-      handle: '@minji.living',
-      avatar_initial: '민',
-      avatar_color_class: 'c5',
-      channel: '틱톡',
-      category: '리빙',
-      followers: '34만',
-      engagement: '7.2%',
-      fee: 2500000,
-      fee_formatted: '₩250만',
-      tag: '# 숏폼 바이럴 강점',
-      status: 'neutral',
-    },
-  ],
+  campaign_id?: string
+  raw_campaign?: any
 }
 
 export async function GET(
@@ -132,12 +34,77 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
-
-  // RLS 우회 데이터 제공 (token 매칭 또는 기본 mock)
-  const data = {
-    ...MOCK_PORTAL_DATA,
-    token,
+  if (!token) {
+    return NextResponse.json({ error: 'Token is required' }, { status: 404 })
   }
 
-  return NextResponse.json(data)
+  try {
+    const supabase = createServiceClient()
+
+    // 1. campaigns 테이블에서 portal_token으로 캠페인 및 광고주 정보 조회
+    const { data: campaign, error: campError } = await supabase
+      .from('campaigns')
+      .select('*, clients(name)')
+      .eq('portal_token', token)
+      .single()
+
+    if (campError || !campaign) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    // 2. campaign_influencers에서 status IN ('proposed','selected','passed') 조회 + influencers JOIN
+    const { data: candidates, error: ciError } = await supabase
+      .from('campaign_influencers')
+      .select('*, influencers(*)')
+      .eq('campaign_id', campaign.id)
+      .in('status', ['proposed', 'selected', 'passed'])
+
+    if (ciError) {
+      return NextResponse.json({ error: ciError.message }, { status: 500 })
+    }
+
+    const formattedCandidates: PortalCandidate[] = (candidates || []).map((ci: any) => {
+      const inf = ci.influencers || {}
+      const followersObj = inf.followers as Record<string, any> | null
+      const engagementObj = inf.avg_engagement as Record<string, any> | null
+
+      const followerText = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj) ? (followersObj.instagram || followersObj.youtube || '10만') : '10만'
+      const engagementText = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? `${engagementObj.instagram || 5.0}%` : '5.0%'
+
+      return {
+        id: ci.id,
+        name: inf.name || '알 수 없음',
+        handle: inf.handle || '',
+        avatar_initial: (inf.name || '인')[0],
+        avatar_color_class: 'c1',
+        channel: inf.primary_channel === 'youtube' ? '유튜브' : inf.primary_channel === 'tiktok' ? '틱톡' : '인스타',
+        category: (inf.categories && inf.categories[0]) || '일반',
+        followers: String(followerText),
+        engagement: String(engagementText),
+        fee: ci.proposed_fee || inf.fee_min || 500000,
+        fee_formatted: `₩${((ci.proposed_fee || inf.fee_min || 500000) / 10000).toFixed(0)}만`,
+        tag: ci.agency_comment || '# 검토 대상',
+        status: ci.status === 'selected' ? 'chosen' : ci.status === 'passed' ? 'passed' : 'neutral',
+      }
+    })
+
+    const clientName = typeof campaign.clients === 'object' && campaign.clients !== null ? (campaign.clients as any).name : '광고주'
+
+    const portalData: PortalData = {
+      token,
+      campaign_id: campaign.id,
+      campaign_title: campaign.name,
+      client_name: clientName,
+      candidate_count: formattedCandidates.length,
+      total_budget_formatted: `₩${((campaign.budget || 0) / 10000).toFixed(0)}만`,
+      deadline: campaign.upload_deadline || campaign.content_deadline || '',
+      candidates: formattedCandidates,
+      raw_campaign: campaign
+    }
+
+    return NextResponse.json(portalData)
+  } catch (error: any) {
+    console.error('Error fetching portal data:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+  }
 }

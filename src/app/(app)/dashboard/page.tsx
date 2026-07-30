@@ -25,18 +25,26 @@ async function getDashboardData() {
 
     return await res.json()
   } catch (error) {
-    console.error('Error fetching dashboard data, falling back to mock:', error)
+    console.error('Error fetching dashboard data:', error)
     return {
-      activeCampaigns: 8,
-      pendingDrafts: 12,
-      pendingShipments: 3,
-      monthlyRevenue: 42800000
+      activeCampaigns: 0,
+      pendingDrafts: 0,
+      pendingShipments: 0,
+      monthlyRevenue: 0,
+      priorityQueue: [],
+      recentActivities: []
     }
   }
 }
 
 export default async function DashboardPage() {
-  await getDashboardData()
+  const data = await getDashboardData()
+
+  const activeCount = data.activeCampaigns ?? 0
+  const draftsCount = data.pendingDrafts ?? 0
+  const shipmentsCount = data.pendingShipments ?? 0
+  const revenue = data.monthlyRevenue ?? 0
+  const revenueFormatted = revenue > 0 ? `₩${(revenue / 1000000).toFixed(1)}M` : '₩0'
 
   return (
     <div className="main select-none">
@@ -51,8 +59,8 @@ export default async function DashboardPage() {
           <MetricCard
             variant="default"
             label="진행 중 캠페인"
-            value="8"
-            delta="▲ 지난주 대비 +2"
+            value={String(activeCount)}
+            delta={`총 ${activeCount}건 진행 중`}
             deltaUp
             icon={
               <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18 }}>
@@ -65,8 +73,8 @@ export default async function DashboardPage() {
           <MetricCard
             variant="green"
             label="이번 주 마감"
-            value="3"
-            delta="D-2 최단 · 쿠쿠 트윈프레셔"
+            value={String(shipmentsCount)}
+            delta={`배송/마감 예정 ${shipmentsCount}건`}
             icon={
               <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18 }}>
                 <path d="M12 7v5l3 2" stroke="#B9FF66" strokeWidth="1.8" strokeLinecap="round" />
@@ -77,8 +85,8 @@ export default async function DashboardPage() {
           <MetricCard
             variant="default"
             label="검수 대기 원고"
-            value="12"
-            delta="평균 왕복 1.8회 · 목표 2회 이하"
+            value={String(draftsCount)}
+            delta={`검수 대기 ${draftsCount}건`}
             icon={
               <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18 }}>
                 <path d="M6 3h9l4 4v14H6z" stroke="#191A23" strokeWidth="1.7" strokeLinejoin="round" />
@@ -89,8 +97,8 @@ export default async function DashboardPage() {
           <MetricCard
             variant="dark"
             label="이번 달 정산 예정"
-            value="₩42.8M"
-            delta="▲ 청구 완료 6건 / 미발송 2건"
+            value={revenueFormatted}
+            delta="정산 대상 금액"
             deltaUp
             icon={
               <svg viewBox="0 0 24 24" fill="none" style={{ width: 18, height: 18 }}>

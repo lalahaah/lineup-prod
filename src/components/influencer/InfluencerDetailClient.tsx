@@ -8,6 +8,45 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { AddToCampaignModal } from '@/components/influencer/AddToCampaignModal'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { InfluencerDetailItem } from '@/app/api/influencers/[id]/route'
+import { CHANNEL_LABELS } from '@/lib/utils'
+
+function getChannelIcon(type: string) {
+  switch (type) {
+    case 'instagram':
+      return (
+        <span className="ch-ico ig">
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="2" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" stroke="currentColor" strokeWidth="2" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </span>
+      )
+    case 'youtube':
+      return (
+        <span className="ch-ico yt">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-1.96C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 1.96A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-1.96c.46-1.77.46-5.33.46-5.33s0-3.56-.46-5.33z" stroke="currentColor" strokeWidth="2" fill="none" />
+            <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" />
+          </svg>
+        </span>
+      )
+    case 'tiktok':
+      return (
+        <span className="ch-ico tt">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14 4c.3 2 1.6 3.6 3.6 3.9v2.3c-1.3.1-2.5-.3-3.6-1v5.4a4.8 4.8 0 1 1-4.8-4.8c.3 0 .5 0 .8.1v2.4a2.4 2.4 0 1 0 1.7 2.3V4H14z" />
+          </svg>
+        </span>
+      )
+    default:
+      return (
+        <span className="ch-ico">
+          <span className="text-xs font-bold">🌐</span>
+        </span>
+      )
+  }
+}
 
 interface InfluencerDetailClientProps {
   influencer: InfluencerDetailItem
@@ -18,6 +57,18 @@ export function InfluencerDetailClient({ influencer: initialData }: InfluencerDe
   const [influencer, setInfluencer] = useState<InfluencerDetailItem>(initialData)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isUpdatingBlacklist, setIsUpdatingBlacklist] = useState(false)
+
+  const channelsList = influencer.channels && influencer.channels.length > 0
+    ? influencer.channels
+    : [
+        {
+          type: influencer.channel || 'instagram',
+          label: influencer.channel_label || '인스타그램',
+          url: '',
+          followers: influencer.followers || 0,
+          followers_formatted: influencer.followers_formatted || '0',
+        },
+      ]
 
   const handleToggleBlacklist = async () => {
     setIsUpdatingBlacklist(true)
@@ -169,20 +220,45 @@ export function InfluencerDetailClient({ influencer: initialData }: InfluencerDe
                       <span className="font-semibold text-[var(--dark)]">{influencer.phone || '-'}</span>
                     </div>
                     <div>
-                      <span className="text-[var(--muted)] block text-xs">주요 채널</span>
-                      <span className="font-semibold text-[var(--dark)]">{influencer.channel_label}</span>
-                    </div>
-                    <div>
-                      <span className="text-[var(--muted)] block text-xs">팔로워 수</span>
-                      <span className="font-semibold text-[var(--dark)]">{influencer.followers_formatted}</span>
-                    </div>
-                    <div>
                       <span className="text-[var(--muted)] block text-xs">평균 참여율</span>
                       <span className="font-semibold text-[var(--dark)]">{influencer.engagement_rate_formatted}</span>
                     </div>
                     <div>
                       <span className="text-[var(--muted)] block text-xs">제안 단가 범위</span>
                       <span className="font-semibold text-[var(--dark)]">{influencer.fee_range_formatted || influencer.fee_formatted}</span>
+                    </div>
+                  </div>
+
+                  {/* 등록된 채널 목록 (동적 행 렌더링) */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[var(--muted)] block text-xs font-semibold">등록된 채널 목록 ({channelsList.length})</span>
+                    <div className="flex flex-col gap-2">
+                      {channelsList.map((ch, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-3 rounded-xl border border-[var(--line-soft)] bg-[var(--gray)]"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {getChannelIcon(ch.type)}
+                            <span className="font-bold text-sm text-[var(--dark)] shrink-0">{ch.label}</span>
+                            {ch.url ? (
+                              <a
+                                href={ch.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-[var(--muted)] hover:underline truncate max-w-[200px]"
+                              >
+                                {ch.url}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-[var(--muted)]">-</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-[var(--dark)] shrink-0 pl-2">
+                            {ch.followers_formatted || (ch.followers ? `${(ch.followers / 10000).toFixed(1)}만` : '0')}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 

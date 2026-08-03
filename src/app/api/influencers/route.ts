@@ -104,16 +104,45 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient()
     const body = await request.json()
 
-    const { name, handle, channel, category, followers, fee, email, phone } = body
+    const {
+      name,
+      handle,
+      channel,
+      primary_channel,
+      category,
+      followers,
+      channel_urls,
+      fee,
+      min_fee,
+      max_fee,
+      email,
+      phone,
+      memo,
+    } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const primaryChannel = (channel as Database['public']['Enums']['channel_type']) || 'instagram'
+    const primaryChannel = ((primary_channel || channel) as Database['public']['Enums']['channel_type']) || 'instagram'
     const categoriesArray = Array.isArray(category) ? category : [category || '기타']
-    const followerCount = Number(followers) || 0
-    const feeMin = Number(fee) || 0
+
+    const feeMin = Number(min_fee ?? fee) || 0
+    const feeMax = Number(max_fee ?? feeMin) || feeMin
+
+    let followersObj: Record<string, number> = {}
+    if (typeof followers === 'object' && followers !== null && !Array.isArray(followers)) {
+      followersObj = followers
+    } else {
+      followersObj = { [primaryChannel]: Number(followers) || 0 }
+    }
+
+    let channelUrlsObj: Record<string, string> = {}
+    if (typeof channel_urls === 'object' && channel_urls !== null && !Array.isArray(channel_urls)) {
+      channelUrlsObj = channel_urls
+    } else if (body.channel_url) {
+      channelUrlsObj = { [primaryChannel]: body.channel_url }
+    }
 
     const { data: newInf, error } = await supabase
       .from('influencers')
@@ -122,15 +151,17 @@ export async function POST(request: NextRequest) {
         handle: handle ? (handle.startsWith('@') ? handle : `@${handle}`) : null,
         primary_channel: primaryChannel,
         categories: categoriesArray,
-        followers: { [primaryChannel]: followerCount },
+        channel_urls: channelUrlsObj,
+        followers: followersObj,
         avg_engagement: { [primaryChannel]: 5.0 },
         fee_min: feeMin,
-        fee_max: feeMin,
+        fee_max: feeMax,
         email: email || null,
         phone: phone || null,
+        notes: memo || null,
         is_blacklisted: false,
         is_public: true,
-        is_verified: false
+        is_verified: false,
       })
       .select()
       .single()

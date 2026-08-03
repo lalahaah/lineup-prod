@@ -8,6 +8,21 @@ import { Header } from '@/components/layout/Header'
 
 const CATEGORY_OPTIONS = ['푸드', '리빙', '뷰티', '패션', 'IT/테크', '육아', '여행', '기타']
 
+const CHANNEL_OPTIONS = [
+  { value: 'instagram', label: '인스타그램' },
+  { value: 'youtube', label: '유튜브' },
+  { value: 'tiktok', label: '틱톡' },
+  { value: 'blog', label: '블로그' },
+  { value: 'naver_tv', label: '네이버TV' },
+  { value: 'threads', label: '스레드' },
+]
+
+interface ChannelRow {
+  type: string
+  url: string
+  followers: string
+}
+
 export default function NewInfluencerPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -17,14 +32,37 @@ export default function NewInfluencerPage() {
     handle: '',
     email: '',
     phone: '',
-    channel: 'instagram',
-    channel_url: '',
-    followers: '',
     categories: ['푸드'] as string[],
     min_fee: '',
     max_fee: '',
     memo: '',
   })
+
+  // 채널 목록 (초기 1개, 최대 5개)
+  const [channels, setChannels] = useState<ChannelRow[]>([
+    { type: 'instagram', url: '', followers: '' },
+  ])
+
+  const handleAddChannel = () => {
+    if (channels.length >= 5) {
+      toast.error('채널은 최대 5개까지 추가할 수 있습니다.')
+      return
+    }
+    const usedTypes = channels.map((c) => c.type)
+    const nextOption = CHANNEL_OPTIONS.find((opt) => !usedTypes.includes(opt.value)) || CHANNEL_OPTIONS[0]
+    setChannels([...channels, { type: nextOption.value, url: '', followers: '' }])
+  }
+
+  const handleRemoveChannel = (index: number) => {
+    if (channels.length <= 1) return
+    setChannels(channels.filter((_, i) => i !== index))
+  }
+
+  const handleChannelChange = (index: number, field: keyof ChannelRow, value: string) => {
+    const updated = [...channels]
+    updated[index] = { ...updated[index], [field]: value }
+    setChannels(updated)
+  }
 
   const handleCategoryToggle = (cat: string) => {
     if (formData.categories.includes(cat)) {
@@ -48,6 +86,20 @@ export default function NewInfluencerPage() {
     }
 
     setIsSubmitting(true)
+
+    // 동적 채널 데이터 가공
+    const channel_urls: Record<string, string> = {}
+    const followers: Record<string, number> = {}
+
+    channels.forEach((ch) => {
+      if (ch.type) {
+        channel_urls[ch.type] = ch.url.trim()
+        followers[ch.type] = ch.followers ? Number(ch.followers) : 0
+      }
+    })
+
+    const primary_channel = channels[0]?.type || 'instagram'
+
     try {
       const res = await fetch('/api/influencers', {
         method: 'POST',
@@ -57,9 +109,10 @@ export default function NewInfluencerPage() {
           handle: formData.handle,
           email: formData.email,
           phone: formData.phone,
-          channel: formData.channel,
-          channel_url: formData.channel_url,
-          followers: formData.followers ? Number(formData.followers) : 0,
+          primary_channel,
+          channel: primary_channel,
+          channel_urls,
+          followers,
           category: formData.categories.join('·') || '기타',
           fee: formData.min_fee ? Number(formData.min_fee) : 0,
           min_fee: formData.min_fee ? Number(formData.min_fee) : 0,
@@ -166,48 +219,103 @@ export default function NewInfluencerPage() {
               </div>
             </div>
 
-            {/* 채널 및 성능 정보 */}
+            {/* 동적 채널 및 지표 정보 */}
             <div>
               <h3 className="text-base font-bold text-[var(--dark)] mb-4 border-b pb-2">
                 채널 및 지표 정보
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[var(--dark)]">주요 채널</label>
-                  <select
-                    value={formData.channel}
-                    onChange={(e) => setFormData({ ...formData, channel: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
+              <div className="flex flex-col gap-3">
+                {channels.map((ch, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 2fr 1fr auto',
+                      gap: '12px',
+                      alignItems: 'center',
+                    }}
                   >
-                    <option value="instagram">인스타그램</option>
-                    <option value="youtube">유튜브</option>
-                    <option value="tiktok">틱톡</option>
-                    <option value="blog">블로그</option>
-                    <option value="naver_tv">네이버TV</option>
-                  </select>
-                </div>
+                    {/* 채널 종류 select */}
+                    <select
+                      value={ch.type}
+                      onChange={(e) => handleChannelChange(idx, 'type', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
+                    >
+                      {CHANNEL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[var(--dark)]">채널 URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://instagram.com/yuri_cooks"
-                    value={formData.channel_url}
-                    onChange={(e) => setFormData({ ...formData, channel_url: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
-                  />
-                </div>
+                    {/* 채널 URL input */}
+                    <input
+                      type="url"
+                      placeholder="채널 URL (https://...)"
+                      value={ch.url}
+                      onChange={(e) => handleChannelChange(idx, 'url', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
+                    />
 
-                <div className="flex flex-col gap-1.5 md:col-span-2">
-                  <label className="text-xs font-bold text-[var(--dark)]">팔로워 (구독자) 수</label>
-                  <input
-                    type="number"
-                    placeholder="예: 125000"
-                    value={formData.followers}
-                    onChange={(e) => setFormData({ ...formData, followers: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
-                  />
-                </div>
+                    {/* 팔로워 수 input */}
+                    <input
+                      type="number"
+                      placeholder="팔로워 수 (숫자)"
+                      value={ch.followers}
+                      onChange={(e) => handleChannelChange(idx, 'followers', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
+                    />
+
+                    {/* 삭제 버튼 (X) */}
+                    <button
+                      type="button"
+                      disabled={channels.length <= 1}
+                      onClick={() => handleRemoveChannel(idx)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--line-soft)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: channels.length <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: channels.length <= 1 ? 0.4 : 1,
+                        transition: 'all 0.15s ease',
+                      }}
+                      className="hover:bg-[var(--dark)] hover:text-white transition-colors"
+                      title="채널 삭제"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                {/* "+ 채널 추가" 버튼 */}
+                {channels.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={handleAddChannel}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '12px',
+                      border: '1.5px dashed var(--line-soft)',
+                      background: 'transparent',
+                      color: 'var(--dark)',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      marginTop: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    className="hover:border-[var(--dark)] font-sans"
+                  >
+                    + 채널 추가
+                  </button>
+                )}
               </div>
             </div>
 

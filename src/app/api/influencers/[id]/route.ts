@@ -2,6 +2,14 @@ import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { CHANNEL_LABELS } from '@/lib/utils'
 
+export interface ChannelDetailInfo {
+  type: string
+  label: string
+  url: string
+  followers: number
+  followers_formatted: string
+}
+
 export interface InfluencerDetailItem {
   id: string
   name: string
@@ -10,6 +18,7 @@ export interface InfluencerDetailItem {
   avatar_color_class?: string
   channel?: string
   channel_label?: string
+  channels?: ChannelDetailInfo[]
   category?: string
   categories_list?: string[]
   email?: string | null
@@ -53,12 +62,40 @@ export async function GET(
 
     const name = influencer.name || '알 수 없음'
     const channel = influencer.primary_channel || 'instagram'
+    const channelUrlsObj = (influencer.channel_urls as Record<string, string> | null) || {}
     const followersObj = influencer.followers as Record<string, any> | null
     const engagementObj = influencer.avg_engagement as Record<string, any> | null
 
-    const followerCount = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj) ? (followersObj.instagram || followersObj.youtube || 0) : Number(influencer.followers) || 0
-    const engagementRate = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? (engagementObj.instagram || engagementObj.youtube || 0) : Number(influencer.avg_engagement) || 0
+    const followerCount = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj) ? (followersObj[channel] || followersObj.instagram || followersObj.youtube || 0) : Number(influencer.followers) || 0
+    const engagementRate = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? (engagementObj[channel] || engagementObj.instagram || engagementObj.youtube || 0) : Number(influencer.avg_engagement) || 0
     const feeMin = influencer.fee_min || 0
+
+    // Build channels list for multi-channel display
+    const keys = Array.from(
+      new Set([
+        channel,
+        ...Object.keys(channelUrlsObj),
+        ...Object.keys(typeof followersObj === 'object' && followersObj !== null ? followersObj : {}),
+      ])
+    )
+
+    const channels: ChannelDetailInfo[] = keys.map((type) => {
+      const url = channelUrlsObj[type] || ''
+      const follNum =
+        typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
+          ? Number(followersObj[type]) || 0
+          : typeof followersObj === 'number'
+          ? followersObj
+          : 0
+
+      return {
+        type,
+        label: CHANNEL_LABELS[type] || type,
+        url,
+        followers: follNum,
+        followers_formatted: follNum > 0 ? `${(follNum / 10000).toFixed(1)}만` : '0',
+      }
+    })
 
     const formatted: InfluencerDetailItem = {
       id: influencer.id,
@@ -68,6 +105,7 @@ export async function GET(
       avatar_color_class: 'c1',
       channel,
       channel_label: CHANNEL_LABELS[channel] || channel,
+      channels,
       category: (influencer.categories && influencer.categories[0]) || '일반',
       categories_list: influencer.categories || ['일반'],
       email: influencer.email,

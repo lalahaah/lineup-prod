@@ -104,41 +104,26 @@ export default function NewInfluencerPage() {
 
     setIsSubmitting(true)
 
-    // 동적 채널 데이터 가공
-    const channel_urls: Record<string, string> = {}
-    const channel_handles: Record<string, string> = {}
-    const followers: Record<string, number> = {}
-
-    channels.forEach((ch) => {
-      if (ch.type) {
-        if (ch.url.trim()) channel_urls[ch.type] = ch.url.trim()
-        if (ch.handle.trim()) channel_handles[ch.type] = ch.handle.trim()
-        followers[ch.type] = ch.followers ? Number(ch.followers) : 0
-      }
-    })
-
-    const primary_channel = channels[0]?.type || 'instagram'
-    const primary_handle = channels[0]?.handle?.trim() || ''
+    const formattedChannels = channels.map((ch) => ({
+      type: ch.type,
+      handle: ch.handle.trim(),
+      url: ch.url.trim(),
+      followers: ch.followers ? Number(ch.followers) : 0,
+    }))
 
     try {
       const res = await fetch('/api/influencers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
-          handle: primary_handle,
-          email: formData.email,
-          phone: formData.phone,
-          primary_channel,
-          channel: primary_channel,
-          channel_urls,
-          channel_handles,
-          followers,
-          category: formData.categories.join('·') || '기타',
-          fee: formData.min_fee ? Number(formData.min_fee) : 0,
-          min_fee: formData.min_fee ? Number(formData.min_fee) : 0,
-          max_fee: formData.max_fee ? Number(formData.max_fee) : 0,
-          memo: formData.memo,
+          name: formData.name.trim(),
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
+          channels: formattedChannels,
+          categories: formData.categories,
+          fee_min: formData.min_fee ? Number(formData.min_fee) : 0,
+          fee_max: formData.max_fee ? Number(formData.max_fee) : 0,
+          notes: formData.memo.trim() || null,
         }),
       })
 

@@ -3,6 +3,27 @@ import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
 import { CHANNEL_LABELS } from '@/lib/utils'
 
+function formatFeeRange(minFee?: number | null, maxFee?: number | null): string {
+  const min = Number(minFee) || 0
+  const max = Number(maxFee) || 0
+
+  if (min <= 0 && max <= 0) return '₩0'
+
+  const minMan = Math.round(min / 10000)
+  const maxMan = Math.round(max / 10000)
+
+  if (min > 0 && max > 0 && min !== max) {
+    return `${minMan}만원~${maxMan}만원`
+  }
+  if (min > 0) {
+    return `${minMan}만원~`
+  }
+  if (max > 0) {
+    return `~${maxMan}만원`
+  }
+  return '₩0'
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() || ''
@@ -60,11 +81,19 @@ export async function GET(request: NextRequest) {
     const formatted = (influencers || []).map((inf: any) => {
       const followersObj = inf.followers as Record<string, any> | null
       const engagementObj = inf.avg_engagement as Record<string, any> | null
-      const followersNum = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj) ? (followersObj.instagram || followersObj.youtube || 0) : Number(inf.followers) || 0
-      const engagementNum = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? (engagementObj.instagram || engagementObj.youtube || 0) : Number(inf.avg_engagement) || 0
-      const feeNum = inf.fee_min || 0
-
       const primaryChannel = inf.primary_channel || 'instagram'
+
+      const followerCount = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
+        ? (followersObj[primaryChannel] || followersObj.instagram || followersObj.youtube || 0)
+        : Number(inf.followers) || 0
+
+      const engagementNum = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj)
+        ? (engagementObj[primaryChannel] || engagementObj.instagram || engagementObj.youtube || 0)
+        : Number(inf.avg_engagement) || 0
+
+      const followersFormatted = followerCount > 0 ? `${Math.round(followerCount / 1000) / 10}만` : '0'
+      const feeFormatted = formatFeeRange(inf.fee_min, inf.fee_max)
+
       const channelHandles = (inf.channel_handles as Record<string, string> | null) || {}
       const displayHandle = channelHandles[primaryChannel] || Object.values(channelHandles)[0] || inf.handle || ''
 
@@ -77,12 +106,12 @@ export async function GET(request: NextRequest) {
         channel: primaryChannel,
         channel_label: CHANNEL_LABELS[primaryChannel] || primaryChannel || '인스타그램',
         category: (inf.categories && inf.categories[0]) || '일반',
-        followers: followersNum,
-        followers_formatted: followersNum > 0 ? `${(followersNum / 10000).toFixed(1)}만` : '0',
+        followers: followerCount,
+        followers_formatted: followersFormatted,
         engagement_rate: engagementNum,
         engagement_rate_formatted: `${engagementNum.toFixed(1)}%`,
-        fee: feeNum,
-        fee_formatted: feeNum > 0 ? `₩${(feeNum / 10000).toFixed(0)}만` : '₩0',
+        fee: inf.fee_min || 0,
+        fee_formatted: feeFormatted,
         status: inf.is_blacklisted ? 'blacklisted' : 'candidate',
         status_label: inf.is_blacklisted ? '블랙리스트' : '후보',
         is_blacklisted: !!inf.is_blacklisted,
@@ -110,58 +139,74 @@ export async function POST(request: NextRequest) {
 
     const {
       name,
-      handle,
-      channel,
-      primary_channel,
-      category,
-      followers,
-      channel_urls,
-      channel_handles,
-      fee,
-      min_fee,
-      max_fee,
       email,
       phone,
+      channels,
+      categories,
+      category,
+      fee_min,
+      fee_max,
+      fee,
+      notes,
       memo,
+      handle,
     } = body
 
-    if (!name) {
+    if (!name || !String(name).trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const primaryChannel = ((primary_channel || channel) as Database['public']['Enums']['channel_type']) || 'instagram'
-    const categoriesArray = Array.isArray(category) ? category : [category || '기타']
-
-    const feeMin = Number(min_fee ?? fee) || 0
-    const feeMax = Number(max_fee ?? feeMin) || feeMin
-
-    let followersObj: Record<string, number> = {}
-    if (typeof followers === 'object' && followers !== null && !Array.isArray(followers)) {
-      followersObj = followers
-    } else {
-      followersObj = { [primaryChannel]: Number(followers) || 0 }
-    }
-
+    let primaryChannel: Database['public']['Enums']['channel_type'] = 'instagram'
     let channelUrlsObj: Record<string, string> = {}
-    if (typeof channel_urls === 'object' && channel_urls !== null && !Array.isArray(channel_urls)) {
-      channelUrlsObj = channel_urls
-    } else if (body.channel_url) {
-      channelUrlsObj = { [primaryChannel]: body.channel_url }
-    }
-
     let channelHandlesObj: Record<string, string> = {}
-    if (typeof channel_handles === 'object' && channel_handles !== null && !Array.isArray(channel_handles)) {
-      channelHandlesObj = channel_handles
-    } else if (handle) {
-      channelHandlesObj = { [primaryChannel]: handle }
+    let followersObj: Record<string, number> = {}
+
+    if (Array.isArray(channels) && channels.length > 0) {
+      primaryChannel = (channels[0].type || 'instagram') as Database['public']['Enums']['channel_type']
+      channels.forEach((ch: any) => {
+        if (ch.type) {
+          if (ch.url) channelUrlsObj[ch.type] = String(ch.url).trim()
+          if (ch.handle) channelHandlesObj[ch.type] = String(ch.handle).trim()
+          followersObj[ch.type] = Number(ch.followers) || 0
+        }
+      })
+    } else {
+      primaryChannel = ((body.primary_channel || body.channel) as Database['public']['Enums']['channel_type']) || 'instagram'
+      if (typeof body.channel_urls === 'object' && body.channel_urls !== null && !Array.isArray(body.channel_urls)) {
+        channelUrlsObj = body.channel_urls
+      } else if (body.channel_url) {
+        channelUrlsObj = { [primaryChannel]: body.channel_url }
+      }
+
+      if (typeof body.channel_handles === 'object' && body.channel_handles !== null && !Array.isArray(body.channel_handles)) {
+        channelHandlesObj = body.channel_handles
+      } else if (handle) {
+        channelHandlesObj = { [primaryChannel]: handle }
+      }
+
+      if (typeof body.followers === 'object' && body.followers !== null && !Array.isArray(body.followers)) {
+        followersObj = body.followers
+      } else {
+        followersObj = { [primaryChannel]: Number(body.followers) || 0 }
+      }
     }
 
     const primaryHandle = channelHandlesObj[primaryChannel] || Object.values(channelHandlesObj)[0] || handle || null
 
+    const categoriesArray = Array.isArray(categories)
+      ? categories
+      : Array.isArray(category)
+      ? category
+      : [category || '기타']
+
+    const feeMin = Number(fee_min ?? fee) || 0
+    const feeMax = Number(fee_max ?? feeMin) || feeMin
+    const notesText = notes || memo || null
+
     const { data: newInf, error } = await supabase
       .from('influencers')
       .insert({
-        name: name.trim(),
+        name: String(name).trim(),
         handle: primaryHandle ? (primaryHandle.startsWith('@') || primaryHandle.includes(' ') ? primaryHandle : `@${primaryHandle}`) : null,
         primary_channel: primaryChannel,
         categories: categoriesArray,
@@ -173,7 +218,7 @@ export async function POST(request: NextRequest) {
         fee_max: feeMax,
         email: email || null,
         phone: phone || null,
-        notes: memo || null,
+        notes: notesText,
         is_blacklisted: false,
         is_public: true,
         is_verified: false,

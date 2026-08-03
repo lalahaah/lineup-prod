@@ -18,8 +18,8 @@ export function InfluencerTable({
 }: InfluencerTableProps) {
   const router = useRouter()
 
-  // Default selected: 4 active candidates selected as in Influencers.html mockup
-  const [selectedIds, setSelectedIds] = useState<string[]>(['inf-1', 'inf-2', 'inf-3', 'inf-6'])
+  // 기본 선택값 = 비어 있음 (체크박스 선택된 수만 카운트)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const selectableInfluencers = influencers.filter(
     (inf) => !inf.is_blacklisted && inf.status !== 'blacklisted'
@@ -58,41 +58,45 @@ export function InfluencerTable({
   return (
     <div>
       {/* Count Line */}
-      <div className="count-line">
+      <div className="count-line" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <span className="muted" style={{ fontSize: '14px' }}>
-          <b style={{ color: 'var(--dark)' }}>{influencers.length}명</b> 검색됨 ·{' '}
-          <b style={{ color: 'var(--dark)' }}>쿠쿠 트윈프레셔</b> 캠페인 후보 구성 중
+          <b style={{ color: 'var(--dark)' }}>{influencers.length}명</b> 검색됨
         </span>
-        <span className="row" style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button type="button" className="rowbtn">
             엑셀 내보내기
           </button>
-          <button type="button" className="rowbtn add">
+          <button
+            type="button"
+            className="rowbtn add cursor-pointer"
+            disabled={selectedIds.length === 0}
+            style={{ opacity: selectedIds.length === 0 ? 0.6 : 1 }}
+          >
             선택 {selectedIds.length}명 캠페인에 추가
           </button>
-        </span>
+        </div>
       </div>
 
       {/* Table Card */}
-      <div className="card flat" style={{ background: 'var(--white)', border: '1px solid var(--dark)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
-        <table className="tbl">
+      <div className="card flat" style={{ background: 'var(--white)', border: '1px solid var(--dark)', borderRadius: 'var(--r-lg)', overflowX: 'auto' }}>
+        <table className="tbl" style={{ width: '100%', tableLayout: 'fixed', minWidth: '820px' }}>
           <thead>
             <tr>
-              <th style={{ width: '30px' }}>
+              <th style={{ width: '40px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th>인플루언서</th>
-              <th>채널</th>
-              <th>카테고리</th>
-              <th className="right">팔로워</th>
-              <th className="right">평균 참여율</th>
-              <th className="right">제안 단가</th>
-              <th>상태</th>
-              <th></th>
+              <th style={{ width: '200px' }}>인플루언서</th>
+              <th style={{ width: '100px' }}>채널</th>
+              <th style={{ width: '80px' }}>카테고리</th>
+              <th className="right" style={{ width: '80px' }}>팔로워</th>
+              <th className="right" style={{ width: '80px' }}>참여율</th>
+              <th className="right" style={{ width: '100px' }}>단가</th>
+              <th style={{ width: '80px' }}>상태</th>
+              <th style={{ width: '60px' }}>액션</th>
             </tr>
           </thead>
           <tbody>
@@ -102,7 +106,7 @@ export function InfluencerTable({
 
               return (
                 <tr key={inf.id} style={isBlack ? { opacity: 0.55 } : undefined}>
-                  <td>
+                  <td style={{ width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={isChecked}
@@ -110,18 +114,18 @@ export function InfluencerTable({
                       onChange={() => !isBlack && toggleSelectOne(inf.id)}
                     />
                   </td>
-                  <td>
-                    <div className="who">
-                      <span className={`av ${inf.avatar_color_class || 'c1'}`}>
+                  <td style={{ width: '200px', overflow: 'hidden' }}>
+                    <div className="who" style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      <span className={`av ${inf.avatar_color_class || 'c1'}`} style={{ flexShrink: 0 }}>
                         {inf.avatar_initial}
                       </span>
-                      <div>
-                        <div className="nm">{inf.name}</div>
-                        <div className="hd">{inf.handle}</div>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <div className="nm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600 }}>{inf.name}</div>
+                        <div className="hd" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '12px', color: 'var(--muted)' }}>{inf.handle}</div>
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td style={{ width: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span className="row" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       {inf.channel === 'instagram' && (
                         <span className="ch-ico ig">
@@ -149,13 +153,13 @@ export function InfluencerTable({
                       {inf.channel_label}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ width: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span className="cat">{inf.category}</span>
                   </td>
-                  <td className="right foll">{inf.followers_formatted}</td>
-                  <td className="right">{inf.engagement_rate_formatted}</td>
-                  <td className="right price">{inf.fee_formatted}</td>
-                  <td>
+                  <td className="right foll" style={{ width: '80px', whiteSpace: 'nowrap' }}>{inf.followers_formatted}</td>
+                  <td className="right" style={{ width: '80px', whiteSpace: 'nowrap' }}>{inf.engagement_rate_formatted}</td>
+                  <td className="right price" style={{ width: '100px', whiteSpace: 'nowrap' }}>{inf.fee_formatted}</td>
+                  <td style={{ width: '80px', whiteSpace: 'nowrap' }}>
                     {inf.status === 'candidate' && (
                       <span className="badge soft">
                         <span className="dot" style={{ background: '#1f8a3b' }}></span>
@@ -165,33 +169,16 @@ export function InfluencerTable({
                     {inf.status === 'uncontacted' && <span className="badge gray">미접촉</span>}
                     {isBlack && <span className="badge danger">블랙리스트</span>}
                   </td>
-                  <td>
-                    {inf.status === 'candidate' && (
-                      <button
-                        type="button"
-                        className="rowbtn"
-                        onClick={() =>
-                          onViewDetail ? onViewDetail(inf) : router.push(`/influencers/${inf.id}`)
-                        }
-                      >
-                        상세
-                      </button>
-
-                    )}
-                    {inf.status === 'uncontacted' && (
-                      <button
-                        type="button"
-                        className="rowbtn add"
-                        onClick={() => onAddCandidate && onAddCandidate(inf)}
-                      >
-                        + 후보
-                      </button>
-                    )}
-                    {isBlack && (
-                      <button type="button" className="rowbtn" disabled>
-                        제외
-                      </button>
-                    )}
+                  <td style={{ width: '60px', whiteSpace: 'nowrap' }}>
+                    <button
+                      type="button"
+                      className="rowbtn"
+                      onClick={() =>
+                        onViewDetail ? onViewDetail(inf) : router.push(`/influencers/${inf.id}`)
+                      }
+                    >
+                      상세
+                    </button>
                   </td>
                 </tr>
               )

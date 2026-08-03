@@ -4,23 +4,21 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { CHANNEL_LABELS } from '@/lib/utils'
 
-interface InfluencerSearchProps {
-  onSearchChange?: (term: string) => void
-}
+const CATEGORY_OPTIONS = ['푸드', '리빙', '뷰티', '패션', 'IT/테크', '육아', '여행', '기타']
 
-export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
+export function InfluencerSearch() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // URL Query state
+  // URL Query states (모든 chip 기본값 = 비활성)
   const selectedChannels = searchParams.get('channels') || ''
-  const selectedCategories = searchParams.get('categories') || '푸드,리빙'
-  const followerFilter = searchParams.get('follower') || '50k-500k'
-  const priceFilter = searchParams.get('price') || '3m'
+  const selectedCategories = searchParams.get('categories') || ''
+  const followerFilter = searchParams.get('follower') || ''
+  const priceFilter = searchParams.get('price') || ''
 
   // Dropdown UI states
-  const [openDropdown, setOpenDropdown] = useState<'channel' | 'category' | 'follower' | 'price' | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<'channel' | 'category' | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,8 +61,11 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
     updateQueryParams('categories', current.length > 0 ? current.join(',') : null)
   }
 
+  const channelCount = selectedChannels ? selectedChannels.split(',').filter(Boolean).length : 0
+  const categoryCount = selectedCategories ? selectedCategories.split(',').filter(Boolean).length : 0
+
   return (
-    <div className="toolbar" ref={dropdownRef} style={{ position: 'relative' }}>
+    <div className="toolbar" ref={dropdownRef} style={{ position: 'relative', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       {/* 1. 채널 필터 Chip */}
       <div style={{ position: 'relative' }}>
         <button
@@ -72,7 +73,7 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
           onClick={() => setOpenDropdown(openDropdown === 'channel' ? null : 'channel')}
           className={`fdrop ${selectedChannels ? 'on' : ''}`}
         >
-          채널 {selectedChannels ? `(${selectedChannels.split(',').length})` : ''}
+          채널 {channelCount > 0 ? `(${channelCount})` : ''}
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M6 9l6 6 6-6" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -94,7 +95,7 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
               display: 'flex',
               flexDirection: 'column',
               gap: '8px',
-              minWidth: '150px',
+              minWidth: '160px',
             }}
           >
             {Object.entries(CHANNEL_LABELS).map(([ch, label]) => {
@@ -121,7 +122,7 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
           onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
           className={`fdrop ${selectedCategories ? 'on' : ''}`}
         >
-          카테고리: {selectedCategories ? selectedCategories.replace(',', '·') : '전체'}
+          카테고리 {categoryCount > 0 ? `(${categoryCount})` : ''}
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M6 9l6 6 6-6" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -143,10 +144,10 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
               display: 'flex',
               flexDirection: 'column',
               gap: '8px',
-              minWidth: '140px',
+              minWidth: '150px',
             }}
           >
-            {['푸드', '리빙', '뷰티', '패션'].map((cat) => {
+            {CATEGORY_OPTIONS.map((cat) => {
               const checked = selectedCategories.split(',').includes(cat)
               return (
                 <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
@@ -168,15 +169,12 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
         <button
           type="button"
           onClick={() => {
-            const next = followerFilter === '50k-500k' ? 'all' : '50k-500k'
-            updateQueryParams('follower', next === 'all' ? null : next)
+            const next = followerFilter === '50k-500k' ? null : '50k-500k'
+            updateQueryParams('follower', next)
           }}
           className={`fdrop ${followerFilter === '50k-500k' ? 'on' : ''}`}
         >
           팔로워 5만~50만
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M6 9l6 6 6-6" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" />
-          </svg>
         </button>
       </div>
 
@@ -185,28 +183,26 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
         <button
           type="button"
           onClick={() => {
-            const next = priceFilter === '3m' ? 'all' : '3m'
-            updateQueryParams('price', next === 'all' ? null : next)
+            const next = priceFilter === '3m' ? null : '3m'
+            updateQueryParams('price', next)
           }}
           className={`fdrop ${priceFilter === '3m' ? 'on' : ''}`}
         >
           단가 ~300만
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M6 9l6 6 6-6" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" />
-          </svg>
         </button>
       </div>
 
-      {/* 5. + 필터 추가 Chip */}
+      {/* 5. + 필터 추가 Chip (블랙리스트 포함 토글) */}
       <button
         type="button"
-        className="fdrop"
+        className={`fdrop ${searchParams.get('exclude_blacklist') === 'false' ? 'on' : ''}`}
         style={{ borderStyle: 'dashed' }}
         onClick={() => {
-          updateQueryParams('exclude_blacklist', searchParams.get('exclude_blacklist') === 'false' ? 'true' : 'false')
+          const isCurrentlyShowingBlacklist = searchParams.get('exclude_blacklist') === 'false'
+          updateQueryParams('exclude_blacklist', isCurrentlyShowingBlacklist ? null : 'false')
         }}
       >
-        + 필터 추가
+        + 블랙리스트 포함
       </button>
     </div>
   )

@@ -1,8 +1,8 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { Header } from '@/components/layout/Header'
 import { InfluencerSearch } from '@/components/influencer/InfluencerSearch'
 import { InfluencerTable } from '@/components/influencer/InfluencerTable'
+import { InfluencersHeaderClient } from '@/components/influencer/InfluencersHeaderClient'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { InfluencerItem } from '@/types'
 
@@ -60,24 +60,7 @@ export default async function InfluencersPage({ searchParams }: PageProps) {
   return (
     <div className="main select-none">
       {/* Header */}
-      <Header
-        title="인플루언서 DB"
-        subTitle={
-          <>
-            총 <b>{totalCount}</b>명 · 블랙리스트 제외
-          </>
-        }
-        searchPlaceholder="이름·핸들 검색"
-        searchValue={resolvedParams.q || ''}
-        actionButton={
-          <Link href="/influencers/new" className="btn font-sans">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            인플루언서 추가
-          </Link>
-        }
-      />
+      <InfluencersHeaderClient totalCount={totalCount} />
 
       {/* Content */}
       <div className="content">

@@ -32,12 +32,12 @@ export type DraftStatus =
 export const STAGE_LABELS: Record<CampaignStage, string> = {
   briefing: '브리핑',
   search: '서치 중',
-  proposal: '광고주 보고',
-  selection: '선택 완료',
+  proposal: '제안',
+  selection: '선택',
   outreach: '섭외 중',
   shipping: '배송',
-  review: '원고 검수',
-  uploaded: '업로드 완료',
+  review: '검수',
+  uploaded: '업로드',
   billing: '정산',
   completed: '완료',
 }

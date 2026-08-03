@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { CampaignCardData } from '@/app/api/campaigns/route'
+import { STAGE_LABELS, type CampaignStage } from '@/types'
 
 interface CampaignCardProps {
   campaign: CampaignCardData
@@ -11,6 +12,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
     id,
     client_name,
     title,
+    stage,
     status_badge,
     progress,
     meta_text,
@@ -24,6 +26,8 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const ddayClass =
     dday_variant === 'hot' ? 'dday hot' : dday_variant === 'warm' ? 'dday warm' : 'dday'
 
+  const badgeLabel = STAGE_LABELS[stage as CampaignStage] || status_badge?.label || stage
+
   return (
     <Link href={`/campaigns/${id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div
@@ -35,7 +39,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
 
         {status_badge && (
           <div className="kmeta mb-2">
-            <span className={`badge ${status_badge.variant}`}>{status_badge.label}</span>
+            <span className={`badge ${status_badge.variant}`}>{badgeLabel}</span>
           </div>
         )}
 

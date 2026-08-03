@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
-import type { CampaignStage } from '@/types'
+import { STAGE_LABELS, type CampaignStage } from '@/types'
 
 export interface CampaignCardData {
   id: string
@@ -32,6 +32,7 @@ export interface CampaignCardData {
   product_name?: string
   content_deadline?: string | null
   upload_deadline?: string | null
+  target_influencers_count?: number | null
   created_at?: string
 }
 
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
     const formatted: CampaignCardData[] = (campaigns || []).map((c: any) => {
       const clientName = c.clients?.name || c.client_name || 'CUCKOO'
       const assigneeName = c.users?.name || '현우'
+      const stageLabel = STAGE_LABELS[c.stage as CampaignStage] || c.stage
 
       return {
         id: c.id,
@@ -71,7 +73,7 @@ export async function GET(request: NextRequest) {
         client_name: clientName,
         title: c.name,
         stage: c.stage,
-        status_badge: { label: c.stage, variant: 'gray' },
+        status_badge: { label: stageLabel, variant: 'gray' },
         assignees: [{ name: assigneeName, avatar: assigneeName[0], color: 'c1' }],
         dday: 'D-7',
         dday_variant: 'default',
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest) {
         product_name: c.product_name,
         content_deadline: c.content_deadline,
         upload_deadline: c.upload_deadline,
+        target_influencers_count: c.influencer_count_target || 5,
         created_at: c.created_at
       }
     })

@@ -7,21 +7,17 @@ interface CampaignStepperProps {
 }
 
 const STAGE_ORDER: CampaignStage[] = [
-  'briefing',
-  'search',
-  'proposal',
-  'selection',
-  'outreach',
-  'shipping',
-  'review',
-  'uploaded',
-  'billing',
+  'preparing',
+  'client_review',
+  'outreaching',
+  'reviewing',
+  'done',
 ]
 
 export function CampaignStepper({ currentStage }: CampaignStepperProps) {
   const currentIndex = STAGE_ORDER.indexOf(currentStage) !== -1
     ? STAGE_ORDER.indexOf(currentStage)
-    : 6 // 기본값: review (검수)
+    : 0
 
   return (
     <div className="steps">

@@ -63,18 +63,18 @@ export const MOCK_CLIENT_CAMPAIGNS: Record<string, Array<{
   amount: string
 }>> = {
   'client-1': [
-    { id: 'camp-1', title: '쿠쿠 트윈프레셔 신제품 런칭', stage: 'review', stage_label: '검수', progress_days: '진행 12일차 (D-2)', amount: '₩15,000,000' },
-    { id: 'camp-3', title: '쿠쿠 에어프라이어 봄 캠페인', stage: 'proposal', stage_label: '제안', progress_days: '진행 5일차 (D-3)', amount: '₩8,500,000' },
-    { id: 'camp-5', title: '쿠쿠 정수기 인스타 협찬', stage: 'outreach', stage_label: '섭외', progress_days: '진행 8일차 (D-3)', amount: '₩12,000,000' },
-    { id: 'camp-8', title: '쿠쿠 밥솥 추석 기획전', stage: 'selection', stage_label: '선택', progress_days: '진행 3일차 (D-6)', amount: '₩20,000,000' },
-    { id: 'camp-9', title: '쿠쿠 비스포크 홈카페', stage: 'uploaded', stage_label: '업로드', progress_days: '진행 20일차 (D-4)', amount: '₩6,400,000' },
+    { id: 'camp-1', title: '쿠쿠 트윈프레셔 신제품 런칭', stage: 'reviewing', stage_label: '원고 검수', progress_days: '진행 12일차 (D-2)', amount: '₩15,000,000' },
+    { id: 'camp-3', title: '쿠쿠 에어프라이어 봄 캠페인', stage: 'client_review', stage_label: '광고주 검토', progress_days: '진행 5일차 (D-3)', amount: '₩8,500,000' },
+    { id: 'camp-5', title: '쿠쿠 정수기 인스타 협찬', stage: 'outreaching', stage_label: '섭외중', progress_days: '진행 8일차 (D-3)', amount: '₩12,000,000' },
+    { id: 'camp-8', title: '쿠쿠 밥솥 추석 기획전', stage: 'preparing', stage_label: '준비중', progress_days: '진행 3일차 (D-6)', amount: '₩20,000,000' },
+    { id: 'camp-9', title: '쿠쿠 비스포크 홈카페', stage: 'done', stage_label: '정산완료', progress_days: '진행 20일차 (D-4)', amount: '₩6,400,000' },
   ],
   'client-2': [
-    { id: 'camp-2', title: '크리넥스 항균 티슈 협찬', stage: 'search', stage_label: '서치', progress_days: '진행 4일차 (D-9)', amount: '₩5,500,000' },
-    { id: 'camp-7', title: '하기스 위생 캠페인', stage: 'shipping', stage_label: '배송', progress_days: '진행 10일차 (D-5)', amount: '₩9,000,000' },
+    { id: 'camp-2', title: '크리넥스 항균 티슈 협찬', stage: 'preparing', stage_label: '준비중', progress_days: '진행 4일차 (D-9)', amount: '₩5,500,000' },
+    { id: 'camp-7', title: '하기스 위생 캠페인', stage: 'outreaching', stage_label: '섭외중', progress_days: '진행 10일차 (D-5)', amount: '₩9,000,000' },
   ],
   'client-3': [
-    { id: 'camp-4', title: '올리브영 뷰티 픽 11월', stage: 'proposal', stage_label: '제안', progress_days: '진행 2일차 (D-8)', amount: '₩11,000,000' },
-    { id: 'camp-10', title: '올리브영 뷰티 신제품', stage: 'billing', stage_label: '정산', progress_days: '진행 25일차 (D-6)', amount: '₩8,400,000' },
+    { id: 'camp-4', title: '올리브영 뷰티 픽 11월', stage: 'client_review', stage_label: '광고주 검토', progress_days: '진행 2일차 (D-8)', amount: '₩11,000,000' },
+    { id: 'camp-10', title: '올리브영 뷰티 신제품', stage: 'done', stage_label: '정산완료', progress_days: '진행 25일차 (D-6)', amount: '₩8,400,000' },
   ]
 }

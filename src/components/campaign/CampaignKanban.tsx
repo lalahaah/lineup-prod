@@ -11,22 +11,18 @@ interface CampaignKanbanProps {
 }
 
 const STAGES: CampaignStage[] = [
-  'briefing',
-  'search',
-  'proposal',
-  'selection',
-  'outreach',
-  'shipping',
-  'review',
-  'uploaded',
-  'billing',
+  'preparing',
+  'client_review',
+  'outreaching',
+  'reviewing',
+  'done',
 ]
 
 export function CampaignKanban({ campaigns }: CampaignKanbanProps) {
   const router = useRouter()
 
   const getCardsByStage = (stage: CampaignStage) => {
-    return campaigns.filter((c) => c.stage === stage)
+    return (campaigns || []).filter((c) => c.stage === stage)
   }
 
   const handleAddCampaign = () => {
@@ -44,8 +40,8 @@ export function CampaignKanban({ campaigns }: CampaignKanbanProps) {
               {stageCards.map((campaign) => (
                 <CampaignCard key={campaign.id} campaign={campaign} />
               ))}
-              {stage === 'briefing' && (
-                <div onClick={handleAddCampaign} className="add-card font-sans">
+              {stage === 'preparing' && (
+                <div onClick={handleAddCampaign} className="add-card font-sans cursor-pointer">
                   + 캠페인 추가
                 </div>
               )}
@@ -53,7 +49,6 @@ export function CampaignKanban({ campaigns }: CampaignKanbanProps) {
           </div>
         )
       })}
-
     </div>
   )
 }

@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: formatted,
       total: formatted.length,
-      totalActive: formatted.filter((c) => c.stage !== 'completed').length,
+      totalActive: formatted.filter((c) => c.stage !== 'done').length,
     })
   } catch (error: any) {
     console.error('Error fetching campaigns:', error)
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       content_deadline: body.content_deadline || null,
       upload_deadline: body.upload_deadline || null,
       budget: body.budget ? Number(body.budget) : null,
-      stage: 'briefing' as Database['public']['Enums']['campaign_stage'],
+      stage: 'preparing' as Database['public']['Enums']['campaign_stage'],
       portal_token: portalToken
     }
 

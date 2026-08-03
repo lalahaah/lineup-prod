@@ -135,7 +135,7 @@ export function CampaignBillingClient({ campaign, billingData }: CampaignBilling
             </span>
           </div>
 
-          <CampaignStepper currentStage="billing" />
+          <CampaignStepper currentStage={campaign.stage || 'done'} />
         </div>
 
         {/* 2-Column Billing Grid */}

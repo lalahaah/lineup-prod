@@ -42,10 +42,10 @@ export async function POST(
       }
     }
 
-    // 3. campaigns.stage -> 'selection' 업데이트
+    // 3. campaigns.stage -> 'outreaching' 자동 변경
     await supabase
       .from('campaigns')
-      .update({ stage: 'selection' })
+      .update({ stage: 'outreaching' })
       .eq('id', campaign.id)
 
     // 4. activity_logs INSERT
@@ -54,13 +54,13 @@ export async function POST(
       type: 'client_selected',
       actor_type: 'client',
       actor_name: '광고주',
-      description: '광고주가 인플루언서 후보 선택 결과를 전달했습니다.',
+      description: '광고주가 인플루언서 후보 선택 결과를 전달했습니다. (섭외중 단계로 이동)',
       metadata: { selections_count: selections?.length || 0 }
     })
 
     return NextResponse.json({
       success: true,
-      message: '선택 결과가 반영되었습니다.',
+      message: '선택 결과가 반영되었습니다. (섭외중 단계로 변경)',
       token,
     })
   } catch (error: any) {

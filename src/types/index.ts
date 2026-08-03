@@ -1,24 +1,40 @@
 export type CampaignStage =
-  | 'briefing'
-  | 'search'
-  | 'proposal'
-  | 'selection'
-  | 'outreach'
-  | 'shipping'
-  | 'review'
-  | 'uploaded'
-  | 'billing'
-  | 'completed'
+  | 'preparing'     // 준비중 (캠페인 생성 ~ 인플루언서 리스트업)
+  | 'client_review' // 광고주 검토 (포털 링크 전달 후)
+  | 'outreaching'   // 섭외중 (광고주 선택 후 인플루언서 연락)
+  | 'reviewing'     // 원고검수
+  | 'done'          // 정산완료
+
+export const STAGE_LABELS: Record<CampaignStage, string> = {
+  preparing: '준비중',
+  client_review: '광고주 검토',
+  outreaching: '섭외중',
+  reviewing: '원고 검수',
+  done: '정산완료',
+}
+
+export const STAGE_COLORS: Record<CampaignStage, string> = {
+  preparing: '#C9C9D0',
+  client_review: '#FFD27A',
+  outreaching: '#9FC0FF',
+  reviewing: '#FF8A7A',
+  done: '#9FE0A8',
+}
 
 export type CIStatus =
-  | 'candidate'
-  | 'proposed'
-  | 'selected'
-  | 'passed'
-  | 'outreached'
-  | 'confirmed'
-  | 'rejected'
-  | 'blackout'
+  | 'candidate'   // 후보 (운영팀이 추가)
+  | 'selected'    // 광고주 선택
+  | 'passed'      // 광고주 패스
+  | 'confirmed'   // 섭외 확정 (인플루언서 수락)
+  | 'rejected'    // 거절 (인플루언서 거절)
+
+export const CI_STATUS_LABELS: Record<CIStatus, string> = {
+  candidate: '후보',
+  selected: '광고주 선택',
+  passed: '광고주 패스',
+  confirmed: '섭외 확정',
+  rejected: '거절',
+}
 
 export type DraftStatus =
   | 'submitted'
@@ -28,32 +44,6 @@ export type DraftStatus =
   | 'client_approved'
   | 'revision_requested'
   | 'rejected'
-
-export const STAGE_LABELS: Record<CampaignStage, string> = {
-  briefing: '브리핑',
-  search: '서치 중',
-  proposal: '제안',
-  selection: '선택',
-  outreach: '섭외 중',
-  shipping: '배송',
-  review: '검수',
-  uploaded: '업로드',
-  billing: '정산',
-  completed: '완료',
-}
-
-export const STAGE_COLORS: Record<CampaignStage, string> = {
-  briefing: '#8B95A1',
-  search: '#3182F6',
-  proposal: '#7B5BFF',
-  selection: '#21C26F',
-  outreach: '#FF5A1F',
-  shipping: '#F6A609',
-  review: '#F04452',
-  uploaded: '#21C26F',
-  billing: '#4E5968',
-  completed: '#191F28',
-}
 
 export interface Client {
   id: string
@@ -130,4 +120,3 @@ export interface InfluencerItem {
   status_label: string
   is_blacklisted: boolean
 }
-

@@ -9,7 +9,7 @@ export async function GET() {
     const { count: activeCampaignsCount } = await supabase
       .from('campaigns')
       .select('*', { count: 'exact', head: true })
-      .neq('stage', 'completed')
+      .neq('stage', 'done')
 
     // 2. pendingDrafts: drafts COUNT where status in ('submitted','agency_reviewing')
     const { count: pendingDraftsCount } = await supabase
@@ -48,24 +48,20 @@ export async function GET() {
       let badgeVariant: 'danger' | 'warn' | 'soft' | 'default' = 'warn'
       let actionLabel = '검수'
 
-      if (pc.stage === 'review') {
+      if (pc.stage === 'reviewing') {
         badgeLabel = '원고 컨펌 대기'
         badgeVariant = 'danger'
         actionLabel = '검수'
-      } else if (pc.stage === 'proposal') {
+      } else if (pc.stage === 'client_review') {
         badgeLabel = '광고주 선택 대기'
         badgeVariant = 'warn'
         actionLabel = '포털 열기'
-      } else if (pc.stage === 'outreach') {
+      } else if (pc.stage === 'outreaching') {
         badgeLabel = '섭외 응답 대기'
         badgeVariant = 'warn'
         actionLabel = '컨택 이력'
-      } else if (pc.stage === 'shipping') {
-        badgeLabel = '배송 처리'
-        badgeVariant = 'soft'
-        actionLabel = '배송 관리'
-      } else if (pc.stage === 'billing') {
-        badgeLabel = '청구서 발송'
+      } else if (pc.stage === 'done') {
+        badgeLabel = '정산 완료'
         badgeVariant = 'default'
         actionLabel = '정산'
       }

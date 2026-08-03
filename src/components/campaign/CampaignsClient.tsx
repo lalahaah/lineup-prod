@@ -21,15 +21,11 @@ interface ClientOption {
 
 const STAGE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'all', label: '전체 스테이지' },
-  { value: 'briefing', label: '브리핑' },
-  { value: 'search', label: '서치 중' },
-  { value: 'proposal', label: '제안' },
-  { value: 'selection', label: '선택' },
-  { value: 'outreach', label: '섭외 중' },
-  { value: 'shipping', label: '배송' },
-  { value: 'review', label: '검수' },
-  { value: 'uploaded', label: '업로드' },
-  { value: 'billing', label: '정산' },
+  { value: 'preparing', label: '준비중' },
+  { value: 'client_review', label: '광고주 검토' },
+  { value: 'outreaching', label: '섭외중' },
+  { value: 'reviewing', label: '원고 검수' },
+  { value: 'done', label: '정산완료' },
 ]
 
 export function CampaignsClient({ initialCampaigns, totalActive }: CampaignsClientProps) {
@@ -85,7 +81,7 @@ export function CampaignsClient({ initialCampaigns, totalActive }: CampaignsClie
     setFilteredCampaigns(result)
   }, [initialCampaigns, searchTerm, selectedClient, selectedStage])
 
-  const activeCount = totalActive ?? (initialCampaigns || []).filter((c) => c.stage !== 'completed').length
+  const activeCount = totalActive ?? (initialCampaigns || []).filter((c) => c.stage !== 'done').length
 
   const filterSelectStyle = (isActive: boolean): React.CSSProperties => ({
     border: '1px solid var(--dark)',

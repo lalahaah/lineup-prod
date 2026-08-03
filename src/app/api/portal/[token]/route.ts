@@ -53,12 +53,21 @@ export async function GET(
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    // 2. campaign_influencers에서 status IN ('proposed','selected','passed') 조회 + influencers JOIN
+    // stage가 client_review 이상일 때만 접근 가능 (preparing 단계 제외)
+    const allowedStages = ['client_review', 'outreaching', 'reviewing', 'done']
+    if (!allowedStages.includes(campaign.stage)) {
+      return NextResponse.json(
+        { error: '광고주 검토 단계가 아닙니다. 운영팀이 포털을 오픈한 후 접근할 수 있습니다.' },
+        { status: 403 }
+      )
+    }
+
+    // 2. campaign_influencers에서 candidate, selected, passed, proposed 전체 조회 + influencers JOIN
     const { data: candidates, error: ciError } = await supabase
       .from('campaign_influencers')
       .select('*, influencers(*)')
       .eq('campaign_id', campaign.id)
-      .in('status', ['proposed', 'selected', 'passed'])
+      .in('status', ['candidate', 'selected', 'passed', 'confirmed'])
 
     if (ciError) {
       return NextResponse.json({ error: ciError.message }, { status: 500 })
@@ -69,8 +78,12 @@ export async function GET(
       const followersObj = inf.followers as Record<string, any> | null
       const engagementObj = inf.avg_engagement as Record<string, any> | null
 
-      const followerText = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj) ? (followersObj.instagram || followersObj.youtube || '10만') : '10만'
-      const engagementText = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? `${engagementObj.instagram || 5.0}%` : '5.0%'
+      const followerText = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
+        ? (followersObj.instagram || followersObj.youtube || '10만')
+        : '10만'
+      const engagementText = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj)
+        ? `${engagementObj.instagram || 5.0}%`
+        : '5.0%'
 
       return {
         id: ci.id,

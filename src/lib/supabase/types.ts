@@ -963,16 +963,11 @@ export type Database = {
         | "payment_sent"
       campaign_goal: "awareness" | "review" | "conversion"
       campaign_stage:
-        | "briefing"
-        | "search"
-        | "proposal"
-        | "selection"
-        | "outreach"
-        | "shipping"
-        | "review"
-        | "uploaded"
-        | "billing"
-        | "completed"
+        | "preparing"
+        | "client_review"
+        | "outreaching"
+        | "reviewing"
+        | "done"
       channel_type:
         | "instagram"
         | "youtube"
@@ -982,13 +977,10 @@ export type Database = {
         | "threads"
       ci_status:
         | "candidate"
-        | "proposed"
         | "selected"
         | "passed"
-        | "outreached"
         | "confirmed"
         | "rejected"
-        | "blackout"
       contact_direction: "outbound" | "inbound"
       contact_type: "email" | "dm" | "phone" | "platform"
       draft_status:
@@ -1152,16 +1144,11 @@ export const Constants = {
       ],
       campaign_goal: ["awareness", "review", "conversion"],
       campaign_stage: [
-        "briefing",
-        "search",
-        "proposal",
-        "selection",
-        "outreach",
-        "shipping",
-        "review",
-        "uploaded",
-        "billing",
-        "completed",
+        "preparing",
+        "client_review",
+        "outreaching",
+        "reviewing",
+        "done",
       ],
       channel_type: [
         "instagram",
@@ -1173,13 +1160,10 @@ export const Constants = {
       ],
       ci_status: [
         "candidate",
-        "proposed",
         "selected",
         "passed",
-        "outreached",
         "confirmed",
         "rejected",
-        "blackout",
       ],
       contact_direction: ["outbound", "inbound"],
       contact_type: ["email", "dm", "phone", "platform"],

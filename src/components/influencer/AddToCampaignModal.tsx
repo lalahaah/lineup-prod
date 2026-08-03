@@ -54,7 +54,7 @@ export function AddToCampaignModal({
           if (res.ok) {
             const data = await res.json()
             const activeCampaigns = (data.data || []).filter(
-              (c: Campaign) => c.stage !== 'completed'
+              (c: Campaign) => c.stage !== 'done'
             )
             setCampaigns(activeCampaigns)
             if (activeCampaigns.length > 0) {

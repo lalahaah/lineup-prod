@@ -58,7 +58,7 @@ export async function GET(
       title: campaign.name || '알 수 없음',
       client: clientObj.name || 'CUCKOO',
       client_id: campaign.client_id,
-      stage: (campaign.stage as CampaignStage) || 'briefing',
+      stage: (campaign.stage as CampaignStage) || 'preparing',
       assignee: userObj.name || '담당자',
       influencer_count: campaign.influencer_count_target || 5,
       approved_count: 3,

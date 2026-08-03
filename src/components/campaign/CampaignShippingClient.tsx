@@ -159,7 +159,7 @@ export function CampaignShippingClient({
             </span>
           </div>
 
-          <CampaignStepper currentStage="shipping" />
+          <CampaignStepper currentStage={campaign.stage || 'outreaching'} />
         </div>
 
         {/* Shipping Card */}

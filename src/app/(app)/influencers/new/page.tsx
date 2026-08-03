@@ -19,6 +19,7 @@ const CHANNEL_OPTIONS = [
 
 interface ChannelRow {
   type: string
+  handle: string
   url: string
   followers: string
 }
@@ -29,7 +30,6 @@ export default function NewInfluencerPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    handle: '',
     email: '',
     phone: '',
     categories: ['푸드'] as string[],
@@ -40,7 +40,7 @@ export default function NewInfluencerPage() {
 
   // 채널 목록 (초기 1개, 최대 5개)
   const [channels, setChannels] = useState<ChannelRow[]>([
-    { type: 'instagram', url: '', followers: '' },
+    { type: 'instagram', handle: '', url: '', followers: '' },
   ])
 
   const handleAddChannel = () => {
@@ -50,7 +50,7 @@ export default function NewInfluencerPage() {
     }
     const usedTypes = channels.map((c) => c.type)
     const nextOption = CHANNEL_OPTIONS.find((opt) => !usedTypes.includes(opt.value)) || CHANNEL_OPTIONS[0]
-    setChannels([...channels, { type: nextOption.value, url: '', followers: '' }])
+    setChannels([...channels, { type: nextOption.value, handle: '', url: '', followers: '' }])
   }
 
   const handleRemoveChannel = (index: number) => {
@@ -62,6 +62,23 @@ export default function NewInfluencerPage() {
     const updated = [...channels]
     updated[index] = { ...updated[index], [field]: value }
     setChannels(updated)
+  }
+
+  const getHandlePlaceholder = (type: string) => {
+    switch (type) {
+      case 'instagram':
+      case 'tiktok':
+      case 'threads':
+        return '@아이디'
+      case 'youtube':
+        return '채널명 또는 @아이디'
+      case 'blog':
+        return '블로그명'
+      case 'naver_tv':
+        return '채널명'
+      default:
+        return '핸들/채널명'
+    }
   }
 
   const handleCategoryToggle = (cat: string) => {
@@ -89,16 +106,19 @@ export default function NewInfluencerPage() {
 
     // 동적 채널 데이터 가공
     const channel_urls: Record<string, string> = {}
+    const channel_handles: Record<string, string> = {}
     const followers: Record<string, number> = {}
 
     channels.forEach((ch) => {
       if (ch.type) {
-        channel_urls[ch.type] = ch.url.trim()
+        if (ch.url.trim()) channel_urls[ch.type] = ch.url.trim()
+        if (ch.handle.trim()) channel_handles[ch.type] = ch.handle.trim()
         followers[ch.type] = ch.followers ? Number(ch.followers) : 0
       }
     })
 
     const primary_channel = channels[0]?.type || 'instagram'
+    const primary_handle = channels[0]?.handle?.trim() || ''
 
     try {
       const res = await fetch('/api/influencers', {
@@ -106,12 +126,13 @@ export default function NewInfluencerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          handle: formData.handle,
+          handle: primary_handle,
           email: formData.email,
           phone: formData.phone,
           primary_channel,
           channel: primary_channel,
           channel_urls,
+          channel_handles,
           followers,
           category: formData.categories.join('·') || '기타',
           fee: formData.min_fee ? Number(formData.min_fee) : 0,
@@ -169,7 +190,7 @@ export default function NewInfluencerPage() {
               <h3 className="text-base font-bold text-[var(--dark)] mb-4 border-b pb-2">
                 기본 인적사항
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-[var(--dark)]">
                     이름 <span className="text-red-500">*</span>
@@ -180,17 +201,6 @@ export default function NewInfluencerPage() {
                     placeholder="예: 유리쿡"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[var(--dark)]">핸들 (@아이디)</label>
-                  <input
-                    type="text"
-                    placeholder="예: @yuri_cooks"
-                    value={formData.handle}
-                    onChange={(e) => setFormData({ ...formData, handle: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
                   />
                 </div>
@@ -230,7 +240,7 @@ export default function NewInfluencerPage() {
                     key={idx}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 2fr 1fr auto',
+                      gridTemplateColumns: '1fr 1fr 2fr 1fr auto',
                       gap: '12px',
                       alignItems: 'center',
                     }}
@@ -247,6 +257,15 @@ export default function NewInfluencerPage() {
                         </option>
                       ))}
                     </select>
+
+                    {/* 핸들/채널명 input */}
+                    <input
+                      type="text"
+                      placeholder={getHandlePlaceholder(ch.type)}
+                      value={ch.handle}
+                      onChange={(e) => handleChannelChange(idx, 'handle', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
+                    />
 
                     {/* 채널 URL input */}
                     <input

@@ -64,14 +64,18 @@ export async function GET(request: NextRequest) {
       const engagementNum = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj) ? (engagementObj.instagram || engagementObj.youtube || 0) : Number(inf.avg_engagement) || 0
       const feeNum = inf.fee_min || 0
 
+      const primaryChannel = inf.primary_channel || 'instagram'
+      const channelHandles = (inf.channel_handles as Record<string, string> | null) || {}
+      const displayHandle = channelHandles[primaryChannel] || Object.values(channelHandles)[0] || inf.handle || ''
+
       return {
         id: inf.id,
         name: inf.name,
-        handle: inf.handle || '',
+        handle: displayHandle,
         avatar_initial: (inf.name || '인')[0],
         avatar_color_class: 'c1',
-        channel: inf.primary_channel || 'instagram',
-        channel_label: CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램',
+        channel: primaryChannel,
+        channel_label: CHANNEL_LABELS[primaryChannel] || primaryChannel || '인스타그램',
         category: (inf.categories && inf.categories[0]) || '일반',
         followers: followersNum,
         followers_formatted: followersNum > 0 ? `${(followersNum / 10000).toFixed(1)}만` : '0',
@@ -112,6 +116,7 @@ export async function POST(request: NextRequest) {
       category,
       followers,
       channel_urls,
+      channel_handles,
       fee,
       min_fee,
       max_fee,
@@ -144,14 +149,24 @@ export async function POST(request: NextRequest) {
       channelUrlsObj = { [primaryChannel]: body.channel_url }
     }
 
+    let channelHandlesObj: Record<string, string> = {}
+    if (typeof channel_handles === 'object' && channel_handles !== null && !Array.isArray(channel_handles)) {
+      channelHandlesObj = channel_handles
+    } else if (handle) {
+      channelHandlesObj = { [primaryChannel]: handle }
+    }
+
+    const primaryHandle = channelHandlesObj[primaryChannel] || Object.values(channelHandlesObj)[0] || handle || null
+
     const { data: newInf, error } = await supabase
       .from('influencers')
       .insert({
         name: name.trim(),
-        handle: handle ? (handle.startsWith('@') ? handle : `@${handle}`) : null,
+        handle: primaryHandle ? (primaryHandle.startsWith('@') || primaryHandle.includes(' ') ? primaryHandle : `@${primaryHandle}`) : null,
         primary_channel: primaryChannel,
         categories: categoriesArray,
         channel_urls: channelUrlsObj,
+        channel_handles: channelHandlesObj,
         followers: followersObj,
         avg_engagement: { [primaryChannel]: 5.0 },
         fee_min: feeMin,

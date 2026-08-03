@@ -523,6 +523,7 @@ export type Database = {
           bio: string | null
           blacklist_reason: string | null
           categories: string[]
+          channel_handles?: Json
           channel_urls: Json
           collab_count: number
           created_at: string
@@ -553,6 +554,7 @@ export type Database = {
           bio?: string | null
           blacklist_reason?: string | null
           categories?: string[]
+          channel_handles?: Json
           channel_urls?: Json
           collab_count?: number
           created_at?: string

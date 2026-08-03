@@ -5,6 +5,7 @@ import { CHANNEL_LABELS } from '@/lib/utils'
 export interface ChannelDetailInfo {
   type: string
   label: string
+  handle?: string
   url: string
   followers: number
   followers_formatted: string
@@ -63,6 +64,7 @@ export async function GET(
     const name = influencer.name || '알 수 없음'
     const channel = influencer.primary_channel || 'instagram'
     const channelUrlsObj = (influencer.channel_urls as Record<string, string> | null) || {}
+    const channelHandlesObj = (influencer.channel_handles as Record<string, string> | null) || {}
     const followersObj = influencer.followers as Record<string, any> | null
     const engagementObj = influencer.avg_engagement as Record<string, any> | null
 
@@ -75,12 +77,14 @@ export async function GET(
       new Set([
         channel,
         ...Object.keys(channelUrlsObj),
+        ...Object.keys(channelHandlesObj),
         ...Object.keys(typeof followersObj === 'object' && followersObj !== null ? followersObj : {}),
       ])
     )
 
     const channels: ChannelDetailInfo[] = keys.map((type) => {
       const url = channelUrlsObj[type] || ''
+      const handle = channelHandlesObj[type] || (type === channel ? influencer.handle || '' : '')
       const follNum =
         typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
           ? Number(followersObj[type]) || 0
@@ -91,16 +95,19 @@ export async function GET(
       return {
         type,
         label: CHANNEL_LABELS[type] || type,
+        handle,
         url,
         followers: follNum,
         followers_formatted: follNum > 0 ? `${(follNum / 10000).toFixed(1)}만` : '0',
       }
     })
 
+    const displayHandle = channelHandlesObj[channel] || Object.values(channelHandlesObj)[0] || influencer.handle || ''
+
     const formatted: InfluencerDetailItem = {
       id: influencer.id,
       name,
-      handle: influencer.handle || '',
+      handle: displayHandle,
       avatar_initial: name[0],
       avatar_color_class: 'c1',
       channel,

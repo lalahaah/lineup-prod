@@ -240,19 +240,28 @@ export function InfluencerDetailClient({ influencer: initialData }: InfluencerDe
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             {getChannelIcon(ch.type)}
-                            <span className="font-bold text-sm text-[var(--dark)] shrink-0">{ch.label}</span>
-                            {ch.url ? (
-                              <a
-                                href={ch.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs text-[var(--muted)] hover:underline truncate max-w-[200px]"
-                              >
-                                {ch.url}
-                              </a>
-                            ) : (
-                              <span className="text-xs text-[var(--muted)]">-</span>
-                            )}
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-[var(--dark)] shrink-0">{ch.label}</span>
+                                {ch.handle && (
+                                  <span className="text-xs font-semibold text-[var(--dark)] bg-[var(--white)] px-2 py-0.5 rounded border border-[var(--line-soft)]">
+                                    {ch.handle}
+                                  </span>
+                                )}
+                              </div>
+                              {ch.url ? (
+                                <a
+                                  href={ch.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-[var(--muted)] hover:underline truncate max-w-[240px] mt-0.5"
+                                >
+                                  {ch.url}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-[var(--muted)] mt-0.5">-</span>
+                              )}
+                            </div>
                           </div>
                           <span className="text-xs font-bold text-[var(--dark)] shrink-0 pl-2">
                             {ch.followers_formatted || (ch.followers ? `${(ch.followers / 10000).toFixed(1)}만` : '0')}

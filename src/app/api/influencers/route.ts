@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/types'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
         avatar_initial: (inf.name || '인')[0],
         avatar_color_class: 'c1',
         channel: inf.primary_channel || 'instagram',
-        channel_label: inf.primary_channel === 'youtube' ? '유튜브' : inf.primary_channel === 'tiktok' ? '틱톡' : '인스타',
+        channel_label: CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램',
         category: (inf.categories && inf.categories[0]) || '일반',
         followers: followersNum,
         followers_formatted: followersNum > 0 ? `${(followersNum / 10000).toFixed(1)}만` : '0',

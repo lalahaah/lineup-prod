@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 export interface CampaignInfluencerDetail {
   id: string
@@ -59,7 +60,7 @@ export async function GET(
         avatar_initial: name[0],
         avatar_color_class: 'c1',
         channel: inf.primary_channel || 'instagram',
-        channel_label: inf.primary_channel === 'youtube' ? '유튜브' : inf.primary_channel === 'tiktok' ? '틱톡' : '인스타',
+        channel_label: CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램',
         followers: typeof inf.followers === 'object' && inf.followers !== null ? (inf.followers.instagram || inf.followers.youtube || '10만') : '10만',
         engagement: typeof inf.avg_engagement === 'object' && inf.avg_engagement !== null ? `${inf.avg_engagement.instagram || 5.0}%` : '5.0%',
         status: ci.status,

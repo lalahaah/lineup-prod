@@ -12,7 +12,12 @@ const GOAL_OPTIONS = [
   { id: 'review', label: '제품 리뷰' },
   { id: 'conversion', label: '구매 전환' },
 ]
-const CHANNEL_OPTIONS = ['인스타그램', '유튜브', '틱톡', '블로그']
+const CHANNEL_OPTIONS = [
+  { value: 'instagram', label: '인스타그램' },
+  { value: 'youtube', label: '유튜브' },
+  { value: 'tiktok', label: '틱톡' },
+  { value: 'blog', label: '블로그' },
+]
 const CATEGORY_OPTIONS = ['푸드', '뷰티', '패션', '라이프', '테크', '기타']
 
 export default function NewCampaignPage() {
@@ -27,7 +32,7 @@ export default function NewCampaignPage() {
     product_name: '',
     product_description: '',
     goal: 'awareness',
-    channels: ['인스타그램'],
+    channels: ['instagram'],
     target_influencers_count: '5',
     categories: ['푸드'],
     content_direction: '',
@@ -290,19 +295,20 @@ export default function NewCampaignPage() {
                 <label style={labelStyle}>희망 채널</label>
                 <div className="flex flex-wrap gap-3 mt-1">
                   {CHANNEL_OPTIONS.map((ch) => {
-                    const isChecked = formData.channels.includes(ch)
+                    const isChecked = formData.channels.includes(ch.value)
                     return (
                       <label
-                        key={ch}
+                        key={ch.value}
                         className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--dark)]"
                       >
                         <input
                           type="checkbox"
+                          value={ch.value}
                           checked={isChecked}
-                          onChange={() => handleChannelToggle(ch)}
+                          onChange={() => handleChannelToggle(ch.value)}
                           className="accent-[var(--dark)]"
                         />
-                        {ch}
+                        {ch.label}
                       </label>
                     )
                   })}

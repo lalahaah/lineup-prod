@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 export interface InfluencerDetailItem {
   id: string
@@ -66,7 +67,7 @@ export async function GET(
       avatar_initial: name[0],
       avatar_color_class: 'c1',
       channel,
-      channel_label: channel === 'youtube' ? '유튜브' : channel === 'tiktok' ? '틱톡' : '인스타',
+      channel_label: CHANNEL_LABELS[channel] || channel,
       category: (influencer.categories && influencer.categories[0]) || '일반',
       categories_list: influencer.categories || ['일반'],
       email: influencer.email,

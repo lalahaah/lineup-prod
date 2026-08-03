@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 export interface PortalCandidate {
   id: string
@@ -77,7 +78,7 @@ export async function GET(
         handle: inf.handle || '',
         avatar_initial: (inf.name || '인')[0],
         avatar_color_class: 'c1',
-        channel: inf.primary_channel === 'youtube' ? '유튜브' : inf.primary_channel === 'tiktok' ? '틱톡' : '인스타',
+        channel: CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램',
         category: (inf.categories && inf.categories[0]) || '일반',
         followers: String(followerText),
         engagement: String(engagementText),

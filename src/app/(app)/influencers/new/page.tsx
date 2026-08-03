@@ -179,10 +179,11 @@ export default function NewInfluencerPage() {
                     onChange={(e) => setFormData({ ...formData, channel: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--dark)] bg-[var(--white)] text-sm font-sans focus:outline-none"
                   >
-                    <option value="instagram">Instagram</option>
-                    <option value="youtube">YouTube</option>
-                    <option value="tiktok">TikTok</option>
-                    <option value="blog">Naver Blog</option>
+                    <option value="instagram">인스타그램</option>
+                    <option value="youtube">유튜브</option>
+                    <option value="tiktok">틱톡</option>
+                    <option value="blog">블로그</option>
+                    <option value="naver_tv">네이버TV</option>
                   </select>
                 </div>
 

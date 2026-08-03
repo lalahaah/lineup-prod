@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 interface InfluencerSearchProps {
   onSearchChange?: (term: string) => void
@@ -96,8 +97,7 @@ export function InfluencerSearch({ onSearchChange }: InfluencerSearchProps) {
               minWidth: '150px',
             }}
           >
-            {['instagram', 'youtube', 'tiktok'].map((ch) => {
-              const label = ch === 'instagram' ? '인스타' : ch === 'youtube' ? '유튜브' : '틱톡'
+            {Object.entries(CHANNEL_LABELS).map(([ch, label]) => {
               const checked = selectedChannels.split(',').includes(ch)
               return (
                 <label key={ch} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>

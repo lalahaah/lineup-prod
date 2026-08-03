@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 export interface InfTokenData {
   token: string
@@ -54,7 +55,7 @@ export async function GET(
       influencer_name: influencer.name || '인플루언서',
       campaign_title: campaign.name || '캠페인',
       client_name: client.name || '광고주',
-      channel_label: influencer.primary_channel === 'youtube' ? '유튜브' : influencer.primary_channel === 'tiktok' ? '틱톡' : '인스타 릴스',
+      channel_label: CHANNEL_LABELS[influencer.primary_channel] || influencer.primary_channel || '인스타그램',
       proposed_fee_formatted: `₩${((ci.proposed_fee || 500000) / 10000).toFixed(0)}만`,
       content_deadline: campaign.content_deadline || '',
       post_period: campaign.upload_deadline ? `${campaign.content_deadline || ''} ~ ${campaign.upload_deadline}` : '',

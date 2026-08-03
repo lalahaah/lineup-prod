@@ -13,14 +13,19 @@ interface CampaignDetailClientProps {
 }
 
 export function CampaignDetailClient({ campaign, influencers: initialInfluencers }: CampaignDetailClientProps) {
-  const [influencers, setInfluencers] = useState<CampaignInfluencerDetail[]>(initialInfluencers)
-  const [selectedInfId, setSelectedInfId] = useState<string>(initialInfluencers[0]?.id || 'ci-1')
+  const safeInfluencers = Array.isArray(initialInfluencers) ? initialInfluencers : []
+  const [influencers, setInfluencers] = useState<CampaignInfluencerDetail[]>(safeInfluencers)
+  const [selectedInfId, setSelectedInfId] = useState<string>(safeInfluencers[0]?.id || 'ci-1')
   const [selectedVersion, setSelectedVersion] = useState<string>('v2')
 
-  const currentInfluencer = influencers.find((i) => i.id === selectedInfId) || influencers[0]
+  const currentInfluencer = (influencers || []).find((i) => i.id === selectedInfId) || (influencers || [])[0]
+
+  const safeChannels = Array.isArray(campaign?.channels) ? campaign.channels : []
+  const safeCategories = Array.isArray(campaign?.categories) ? campaign.categories : []
+  const safeHashtags = Array.isArray(campaign?.hashtags) ? campaign.hashtags : safeCategories.length > 0 ? safeCategories : ['#신제품']
 
   const handleCopyPortalLink = () => {
-    const link = `${window.location.origin}/portal/${campaign.portal_token}`
+    const link = `${window.location.origin}/portal/${campaign?.portal_token || ''}`
     navigator.clipboard.writeText(link)
     toast.success('광고주 포털 링크가 클립보드에 복사됐습니다.')
   }
@@ -28,7 +33,7 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
   const handleApprove = () => {
     if (!currentInfluencer) return
     setInfluencers((prev) =>
-      prev.map((item) =>
+      (prev || []).map((item) =>
         item.id === currentInfluencer.id
           ? {
               ...item,
@@ -45,7 +50,7 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
   const handleRequestRevision = () => {
     if (!currentInfluencer) return
     setInfluencers((prev) =>
-      prev.map((item) =>
+      (prev || []).map((item) =>
         item.id === currentInfluencer.id
           ? {
               ...item,
@@ -82,13 +87,13 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
             캠페인
           </Link>
           <h1 className="font-bold text-2xl tracking-tight text-[var(--dark)]">
-            {campaign.title}
+            {campaign?.title || '캠페인 상세'}
           </h1>
         </div>
         <div className="spacer" />
-        <span className="badge dark">{campaign.client}</span>
-        <span className={`dday ${campaign.dday_variant === 'hot' ? 'hot' : 'warm'}`}>
-          {campaign.dday}
+        <span className="badge dark">{campaign?.client || '광고주'}</span>
+        <span className={`dday ${campaign?.dday_variant === 'hot' ? 'hot' : 'warm'}`}>
+          {campaign?.dday || '마감 D-day'}
         </span>
         <button
           type="button"
@@ -129,11 +134,11 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
               <b style={{ fontSize: '16px' }}>원고 검수 · Review</b>
             </div>
             <span className="muted" style={{ fontSize: '13px' }}>
-              담당 {campaign.assignee} · 인플루언서 {campaign.influencer_count}명
+              담당 {campaign?.assignee || '담당자'} · 인플루언서 {campaign?.influencer_count || (influencers || []).length}명
             </span>
           </div>
 
-          <CampaignStepper currentStage={campaign.stage} />
+          <CampaignStepper currentStage={campaign?.stage || 'briefing'} />
         </div>
 
         {/* 2-Column Detail Grid */}
@@ -160,14 +165,15 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
                   marginBottom: '6px',
                   padding: '0 4px',
                 }}
-
               >
                 <h2 style={{ fontSize: '17px', fontWeight: 700 }}>참여 인플루언서</h2>
-                <span className="badge soft">승인 {campaign.approved_count} / {influencers.length}</span>
+                <span className="badge soft">
+                  승인 {campaign?.approved_count || 0} / {(influencers || []).length}
+                </span>
               </div>
 
               <div className="inf-list">
-                {influencers.map((inf) => {
+                {(influencers || []).map((inf) => {
                   const isSelected = inf.id === selectedInfId
                   return (
                     <div
@@ -206,23 +212,23 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
               <div className="grid-2" style={{ gap: '14px' }}>
                 <div className="kv">
                   <b>제품</b>
-                  {campaign.product_name}
+                  {campaign?.product_name || '-'}
                 </div>
                 <div className="kv">
                   <b>채널</b>
-                  {campaign.channels_text}
+                  {campaign?.channels_text || (safeChannels.length > 0 ? safeChannels.join(' / ') : '-')}
                 </div>
                 <div className="kv">
                   <b>원고 마감</b>
-                  {campaign.content_deadline}
+                  {campaign?.content_deadline || '-'}
                 </div>
                 <div className="kv">
                   <b>게시 기간</b>
-                  {campaign.post_period}
+                  {campaign?.post_period || '-'}
                 </div>
               </div>
-              <div className="guide-row">
-                {campaign.hashtags.map((tag, idx) => (
+              <div className="guide-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '14px' }}>
+                {safeHashtags.map((tag, idx) => (
                   <span key={idx} className="badge gray">
                     {tag}
                   </span>
@@ -268,18 +274,32 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
 
               {/* Version Tabs */}
               <div className="ver-tabs">
-                <span
-                  className={`ver-tab ${selectedVersion === 'v1' ? 'on' : ''}`}
-                  onClick={() => setSelectedVersion('v1')}
-                >
-                  v1 <span className="vb muted">반려</span>
-                </span>
-                <span
-                  className={`ver-tab ${selectedVersion === 'v2' ? 'on' : ''}`}
-                  onClick={() => setSelectedVersion('v2')}
-                >
-                  v2 <span className="vb">검수 중</span>
-                </span>
+                {(currentInfluencer.draft_versions || []).length > 0 ? (
+                  currentInfluencer.draft_versions.map((ver: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className={`ver-tab ${selectedVersion === ver.version ? 'on' : ''}`}
+                      onClick={() => setSelectedVersion(ver.version)}
+                    >
+                      {ver.version} <span className={`vb ${ver.variant === 'muted' ? 'muted' : ''}`}>{ver.label}</span>
+                    </span>
+                  ))
+                ) : (
+                  <>
+                    <span
+                      className={`ver-tab ${selectedVersion === 'v1' ? 'on' : ''}`}
+                      onClick={() => setSelectedVersion('v1')}
+                    >
+                      v1 <span className="vb muted">반려</span>
+                    </span>
+                    <span
+                      className={`ver-tab ${selectedVersion === 'v2' ? 'on' : ''}`}
+                      onClick={() => setSelectedVersion('v2')}
+                    >
+                      v2 <span className="vb">검수 중</span>
+                    </span>
+                  </>
+                )}
                 <span className="ver-tab" style={{ borderStyle: 'dashed', color: 'var(--muted)' }}>
                   + 재제출 대기
                 </span>
@@ -300,7 +320,6 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-
                       gap: '10px',
                       color: 'var(--muted)',
                       padding: '20px',
@@ -346,14 +365,14 @@ export function CampaignDetailClient({ campaign, influencers: initialInfluencers
                   <h4 style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 400, marginBottom: '6px' }}>
                     캡션 원고
                   </h4>
-                  <p className="cap">{currentInfluencer.caption}</p>
+                  <p className="cap">{currentInfluencer.caption || '작성된 캡션 원고가 없습니다.'}</p>
 
                   <h4 style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 400, margin: '22px 0 6px' }}>
                     피드백 이력
                   </h4>
                   <div className="feedback">
-                    {currentInfluencer.feedback_history.length > 0 ? (
-                      currentInfluencer.feedback_history.map((fb) => (
+                    {(currentInfluencer.feedback_history || []).length > 0 ? (
+                      (currentInfluencer.feedback_history || []).map((fb: any) => (
                         <div key={fb.id} className={`fb ${fb.is_me ? 'me' : ''}`}>
                           <span className={`av ${fb.avatar_color_class || 'c1'} sm`}>
                             {fb.avatar_initial}

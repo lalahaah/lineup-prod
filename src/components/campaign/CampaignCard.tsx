@@ -66,7 +66,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
 
         <div className="kfoot">
           <div className="av-stack">
-            {assignees.map((a, i) => (
+            {(assignees || []).map((a, i) => (
               <span key={i} className={`av sm ${a.color || 'c1'}`} title={a.name}>
                 {a.avatar}
               </span>

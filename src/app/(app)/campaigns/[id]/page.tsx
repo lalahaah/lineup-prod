@@ -28,16 +28,26 @@ async function getCampaignDetailData(id: string): Promise<{
       }),
     ])
 
-    const campaign = campRes.ok ? await campRes.json() : null
+    const campaignJson = campRes.ok ? await campRes.json() : null
     const infJson = infRes.ok ? await infRes.json() : null
 
+    const campaignData = campaignJson ? {
+      ...campaignJson,
+      channels: campaignJson.channels || [],
+      categories: campaignJson.categories || [],
+      attachment_urls: campaignJson.attachment_urls || [],
+      assignees: campaignJson.assignees || [],
+      hashtags: campaignJson.hashtags || campaignJson.categories || ['#신제품'],
+    } : null
+
     return {
-      campaign: campaign || {
+      campaign: campaignData || {
         id,
         title: '쿠쿠 트윈프레셔 신제품 런칭',
         client: 'CUCKOO',
         stage: 'review',
         assignee: '김현우',
+        assignees: [],
         influencer_count: 5,
         approved_count: 3,
         content_deadline: '06.08 (D-2)',
@@ -45,11 +55,18 @@ async function getCampaignDetailData(id: string): Promise<{
         dday_variant: 'hot',
         portal_token: 'mock-portal-token-001',
         product_name: '쿠쿠 트윈프레셔 IH',
+        channels: ['인스타그램', '유튜브'],
         channels_text: '인스타 릴스 / 유튜브',
+        categories: ['푸드', '리빙'],
+        attachment_urls: [],
         post_period: '06.10 ~ 06.20',
         hashtags: ['# 신혼집밥', '# 쿠쿠트윈프레셔', '필수 태그 2개'],
       },
-      influencers: infJson?.data || [],
+      influencers: Array.isArray(infJson?.data)
+        ? infJson.data
+        : Array.isArray(infJson?.formatted)
+        ? infJson.formatted
+        : [],
     }
   } catch (error) {
     console.error('Error fetching campaign detail data, using fallback:', error)

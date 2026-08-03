@@ -60,7 +60,7 @@ export function CampaignsClient({ initialCampaigns, totalActive }: CampaignsClie
 
   // 클라이언트 사이드 필터링 (검색어, 광고주, 스테이지)
   useEffect(() => {
-    let result = initialCampaigns
+    let result = initialCampaigns || []
 
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase()
@@ -85,7 +85,7 @@ export function CampaignsClient({ initialCampaigns, totalActive }: CampaignsClie
     setFilteredCampaigns(result)
   }, [initialCampaigns, searchTerm, selectedClient, selectedStage])
 
-  const activeCount = totalActive ?? initialCampaigns.filter((c) => c.stage !== 'completed').length
+  const activeCount = totalActive ?? (initialCampaigns || []).filter((c) => c.stage !== 'completed').length
 
   const filterSelectStyle = (isActive: boolean): React.CSSProperties => ({
     border: '1px solid var(--dark)',

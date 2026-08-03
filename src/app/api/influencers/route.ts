@@ -27,12 +27,19 @@ function formatFeeRange(minFee?: number | null, maxFee?: number | null): string 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() || ''
-  const channelsParam = searchParams.get('channels') || ''
+
+  const channelParam = searchParams.get('channel') || searchParams.get('channels') || ''
   const categoriesParam = searchParams.get('categories') || ''
+  const followersRange = searchParams.get('followers_range') || ''
+  const feeRange = searchParams.get('fee_range') || ''
+  const feeMinParam = searchParams.get('fee_min')
+  const feeMaxParam = searchParams.get('fee_max')
+  const collabStatus = searchParams.get('collab_status') || ''
+  const includeBlacklistParam = searchParams.get('include_blacklist') || searchParams.get('exclude_blacklist')
+  const includeBlacklist = includeBlacklistParam === 'true' || searchParams.get('exclude_blacklist') === 'false'
+
   const page = parseInt(searchParams.get('page') || '1', 10)
-  const limit = parseInt(searchParams.get('limit') || '20', 10)
-  const excludeBlacklistParam = searchParams.get('exclude_blacklist')
-  const excludeBlacklist = excludeBlacklistParam === null ? true : excludeBlacklistParam === 'true'
+  const limit = parseInt(searchParams.get('limit') || '50', 10)
 
   try {
     const supabase = createServiceClient()
@@ -41,8 +48,8 @@ export async function GET(request: NextRequest) {
       .from('influencers')
       .select('*', { count: 'exact' })
 
-    // 1. exclude_blacklist=true: is_blacklisted = false
-    if (excludeBlacklist) {
+    // 1. 블랙리스트 제외 (기본값)
+    if (!includeBlacklist) {
       query = query.eq('is_blacklisted', false)
     }
 
@@ -51,26 +58,60 @@ export async function GET(request: NextRequest) {
       query = query.or(`name.ilike.%${q}%,handle.ilike.%${q}%`)
     }
 
-    // 3. channels: primary_channel IN 필터
-    if (channelsParam) {
-      const channelList = channelsParam.split(',').map((c) => c.trim()).filter((c) => c && c !== 'all')
-      if (channelList.length > 0) {
+    // 3. channel: primary_channel 필터 (단일 또는 다중)
+    if (channelParam && channelParam !== 'all') {
+      const channelList = channelParam.split(',').map((c) => c.trim()).filter((c) => c && c !== 'all')
+      if (channelList.length === 1) {
+        query = query.eq('primary_channel', channelList[0] as Database['public']['Enums']['channel_type'])
+      } else if (channelList.length > 1) {
         query = query.in('primary_channel', channelList as Database['public']['Enums']['channel_type'][])
       }
     }
 
-    // 4. categories: categories 배열 contains 필터
-    if (categoriesParam) {
+    // 4. categories: OR 조건 (.overlaps 사용)
+    if (categoriesParam && categoriesParam !== 'all') {
       const categoryList = categoriesParam.split(',').map((c) => c.trim()).filter((c) => c && c !== 'all')
       if (categoryList.length > 0) {
-        query = query.contains('categories', categoryList)
+        query = query.overlaps('categories', categoryList)
       }
     }
 
-    // 5. page, limit으로 페이지네이션
-    const from = (page - 1) * limit
-    const to = from + limit - 1
-    query = query.range(from, to).order('created_at', { ascending: false })
+    // 5. fee 필터 (직접 입력 또는 fee_range)
+    if (feeMinParam) {
+      const minVal = Number(feeMinParam)
+      if (!isNaN(minVal)) query = query.gte('fee_min', minVal)
+    } else if (feeRange && feeRange !== 'all') {
+      const [minStr] = feeRange.split('-')
+      if (minStr) {
+        const minVal = Number(minStr)
+        if (!isNaN(minVal)) query = query.gte('fee_min', minVal)
+      }
+    }
+
+    if (feeMaxParam) {
+      const maxVal = Number(feeMaxParam)
+      if (!isNaN(maxVal)) query = query.lte('fee_max', maxVal)
+    } else if (feeRange && feeRange !== 'all') {
+      if (feeRange.endsWith('+')) {
+        const minVal = Number(feeRange.replace('+', ''))
+        if (!isNaN(minVal)) query = query.gte('fee_min', minVal)
+      } else {
+        const [, maxStr] = feeRange.split('-')
+        if (maxStr) {
+          const maxVal = Number(maxStr)
+          if (!isNaN(maxVal)) query = query.lte('fee_max', maxVal)
+        }
+      }
+    }
+
+    // 6. collab_status 필터
+    if (collabStatus === 'has_collab') {
+      query = query.gt('collab_count', 0)
+    } else if (collabStatus === 'no_collab') {
+      query = query.or('collab_count.eq.0,collab_count.is.null')
+    }
+
+    query = query.order('created_at', { ascending: false })
 
     const { data: influencers, count, error } = await query
 
@@ -78,17 +119,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const formatted = (influencers || []).map((inf: any) => {
+    let filteredList = influencers || []
+
+    // 7. 팔로워 범위 필터 (메모리 가공 / JSONB 계산)
+    if (followersRange && followersRange !== 'all') {
+      let minFoll = 0
+      let maxFoll = Infinity
+
+      if (followersRange === '0-10000') {
+        minFoll = 0
+        maxFoll = 10000
+      } else if (followersRange === '10000-100000') {
+        minFoll = 10000
+        maxFoll = 100000
+      } else if (followersRange === '100000-1000000') {
+        minFoll = 100000
+        maxFoll = 1000000
+      } else if (followersRange === '1000000+') {
+        minFoll = 1000000
+        maxFoll = Infinity
+      }
+
+      filteredList = filteredList.filter((inf: any) => {
+        const primaryChannel = inf.primary_channel || 'instagram'
+        const followersObj = inf.followers as Record<string, any> | null
+        const count = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
+          ? Number(followersObj[primaryChannel] || followersObj.instagram || followersObj.youtube || 0)
+          : Number(inf.followers) || 0
+
+        return count >= minFoll && count <= maxFoll
+      })
+    }
+
+    // 페이지네이션
+    const from = (page - 1) * limit
+    const paginatedList = filteredList.slice(from, from + limit)
+
+    const formatted = paginatedList.map((inf: any) => {
       const followersObj = inf.followers as Record<string, any> | null
       const engagementObj = inf.avg_engagement as Record<string, any> | null
       const primaryChannel = inf.primary_channel || 'instagram'
 
       const followerCount = typeof followersObj === 'object' && followersObj !== null && !Array.isArray(followersObj)
-        ? (followersObj[primaryChannel] || followersObj.instagram || followersObj.youtube || 0)
+        ? Number(followersObj[primaryChannel] || followersObj.instagram || followersObj.youtube || 0)
         : Number(inf.followers) || 0
 
       const engagementNum = typeof engagementObj === 'object' && engagementObj !== null && !Array.isArray(engagementObj)
-        ? (engagementObj[primaryChannel] || engagementObj.instagram || engagementObj.youtube || 0)
+        ? Number(engagementObj[primaryChannel] || engagementObj.instagram || engagementObj.youtube || 0)
         : Number(inf.avg_engagement) || 0
 
       const followersFormatted = followerCount > 0 ? `${Math.round(followerCount / 1000) / 10}만` : '0'
@@ -106,6 +183,7 @@ export async function GET(request: NextRequest) {
         channel: primaryChannel,
         channel_label: CHANNEL_LABELS[primaryChannel] || primaryChannel || '인스타그램',
         category: (inf.categories && inf.categories[0]) || '일반',
+        categories_list: inf.categories || ['일반'],
         followers: followerCount,
         followers_formatted: followersFormatted,
         engagement_rate: engagementNum,
@@ -115,14 +193,18 @@ export async function GET(request: NextRequest) {
         status: inf.is_blacklisted ? 'blacklisted' : 'candidate',
         status_label: inf.is_blacklisted ? '블랙리스트' : '후보',
         is_blacklisted: !!inf.is_blacklisted,
+        email: inf.email,
+        phone: inf.phone,
+        total_collaborations: inf.collab_count || 0,
+        notes: inf.notes,
       }
     })
 
     return NextResponse.json({
       data: formatted,
-      raw_data: influencers,
-      total: count ?? formatted.length,
-      totalCount: count ?? formatted.length,
+      raw_data: paginatedList,
+      total: filteredList.length,
+      totalCount: filteredList.length,
       page,
       limit,
     })

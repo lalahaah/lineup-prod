@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import * as XLSX from 'xlsx'
 import type { InfluencerItem } from '@/types'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { AddToCampaignModal } from '@/components/influencer/AddToCampaignModal'
 
 interface InfluencerTableProps {
   influencers: InfluencerItem[]
@@ -20,6 +22,8 @@ export function InfluencerTable({
 
   // 기본 선택값 = 비어 있음 (체크박스 선택된 수만 카운트)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false)
+  const [targetSingleInf, setTargetSingleInf] = useState<InfluencerItem | null>(null)
 
   const selectableInfluencers = influencers.filter(
     (inf) => !inf.is_blacklisted && inf.status !== 'blacklisted'
@@ -45,6 +49,45 @@ export function InfluencerTable({
     }
   }
 
+  // 5. 엑셀 내보내기 (체크 선택 시 선택된 것만, 없으면 전체 다운로드)
+  const handleExportExcel = () => {
+    const targetItems = selectedIds.length > 0
+      ? influencers.filter((inf) => selectedIds.includes(inf.id))
+      : influencers
+
+    if (targetItems.length === 0) return
+
+    const rows = targetItems.map((inf: any) => ({
+      이름: inf.name || '',
+      주요채널: inf.channel_label || inf.channel || '',
+      핸들: inf.handle || '',
+      팔로워: inf.followers_formatted || inf.followers || 0,
+      카테고리: inf.category || (inf.categories_list ? inf.categories_list.join(', ') : ''),
+      단가범위: inf.fee_formatted || '',
+      이메일: inf.email || '',
+      연락처: inf.phone || '',
+      협업횟수: inf.total_collaborations ?? 0,
+      메모: inf.notes || inf.memo || '',
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '인플루언서DB')
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    XLSX.writeFile(workbook, `lineup_인플루언서_DB_${today}.xlsx`)
+  }
+
+  const handleOpenBulkCampaignModal = () => {
+    setTargetSingleInf(null)
+    setIsCampaignModalOpen(true)
+  }
+
+  const handleOpenSingleCampaignModal = (inf: InfluencerItem) => {
+    setTargetSingleInf(inf)
+    setIsCampaignModalOpen(true)
+  }
+
   if (influencers.length === 0) {
     return (
       <EmptyState
@@ -55,6 +98,8 @@ export function InfluencerTable({
     )
   }
 
+  const activeSelectedIds = targetSingleInf ? [targetSingleInf.id] : selectedIds
+
   return (
     <div>
       {/* Count Line */}
@@ -63,12 +108,13 @@ export function InfluencerTable({
           <b style={{ color: 'var(--dark)' }}>{influencers.length}명</b> 검색됨
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <button type="button" className="rowbtn">
-            엑셀 내보내기
+          <button type="button" onClick={handleExportExcel} className="rowbtn cursor-pointer font-sans">
+            📥 엑셀 내보내기
           </button>
           <button
             type="button"
-            className="rowbtn add cursor-pointer"
+            onClick={handleOpenBulkCampaignModal}
+            className="rowbtn add cursor-pointer font-sans"
             disabled={selectedIds.length === 0}
             style={{ opacity: selectedIds.length === 0 ? 0.6 : 1 }}
           >
@@ -186,6 +232,17 @@ export function InfluencerTable({
           </tbody>
         </table>
       </div>
+
+      {/* 캠페인 추가 모달 */}
+      <AddToCampaignModal
+        isOpen={isCampaignModalOpen}
+        onClose={() => setIsCampaignModalOpen(false)}
+        selectedIds={activeSelectedIds}
+        onSuccess={() => {
+          setSelectedIds([])
+          setTargetSingleInf(null)
+        }}
+      />
     </div>
   )
 }

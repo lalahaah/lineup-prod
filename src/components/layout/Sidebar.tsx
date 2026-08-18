@@ -100,7 +100,7 @@ export function Sidebar({ className }: SidebarProps) {
     },
     {
       name: '인플루언서 링크',
-      href: '/inf/demo',
+      href: '/inf',
       icon: (
         <svg viewBox="0 0 24 24" fill="none">
           <rect x="7" y="3" width="10" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.7" />

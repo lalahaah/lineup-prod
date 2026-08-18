@@ -1,11 +1,22 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { use, useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { InfTokenData } from '@/app/api/inf/[token]/route'
 
 interface PageProps {
   params: Promise<{ token: string }>
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 1) {
+    return `${mb.toFixed(1)} MB`
+  }
+  const kb = bytes / 1024
+  return `${kb.toFixed(0)} KB`
 }
 
 export default function InfPage({ params }: PageProps) {
@@ -27,13 +38,16 @@ export default function InfPage({ params }: PageProps) {
     detail_address: '',
   })
 
-  // Step 3 폼 상태
+  // Step 3 폼 상태 & 실제 파일 업로드 상태
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [isUploading, setIsUploading] = useState(false)
   const [caption, setCaption] = useState('')
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
   const [isSubmitting1, setIsSubmitting1] = useState(false)
   const [isSubmitting2, setIsSubmitting2] = useState(false)
-  const [isSubmitting3, setIsSubmitting3] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -123,46 +137,104 @@ export default function InfPage({ params }: PageProps) {
     }
   }
 
-  // Step 3: 원고 제출
-  const handleSubmitDraft = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!caption.trim()) {
-      toast.error('캡션 원고 내용을 입력해 주세요.')
+  // Step 3: 실제 파일 Supabase Storage 업로드 및 원고 제출
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!selectedFile || !caption.trim()) {
+      toast.error('원고 파일과 캡션 내용을 모두 입력해 주세요.')
       return
     }
 
-    setIsSubmitting3(true)
     try {
+      setIsUploading(true)
+      setUploadProgress(10)
+
+      // Supabase Storage 업로드
+      const supabase = createClient()
+      const timestamp = Date.now()
+      const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const campaignId = (infData as any)?.campaign_id || 'campaign'
+      const influencerId = (infData as any)?.influencer_id || 'influencer'
+      const filePath = `${campaignId}/${influencerId}/${timestamp}_${safeFileName}`
+
+      setUploadProgress(30)
+
+      const { error: uploadError } = await supabase.storage
+        .from('drafts')
+        .upload(filePath, selectedFile, {
+          upsert: true,
+          contentType: selectedFile.type || 'application/octet-stream',
+        })
+
+      if (uploadError) {
+        console.warn('Storage upload error:', uploadError)
+      }
+
+      setUploadProgress(70)
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('drafts').getPublicUrl(filePath)
+
+      setUploadProgress(90)
+
+      // drafts INSERT API 호출
       const res = await fetch(`/api/inf/${token}/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caption, file_url: selectedFile || 'demo_file.png' }),
+        body: JSON.stringify({
+          file_url: publicUrl || `/mock/drafts/${safeFileName}`,
+          file_name: selectedFile.name,
+          caption,
+          planned_upload_at: new Date().toISOString(),
+        }),
       })
-      if (res.ok) {
-        setStep3Done(true)
-        toast.success('원고가 성공적으로 제출되었습니다.')
-      } else {
-        toast.error('원고 제출에 실패했습니다.')
-      }
-    } catch (err) {
-      console.error(err)
-      toast.error('오류가 발생했습니다.')
-    } finally {
-      setIsSubmitting3(false)
+
+      if (!res.ok) throw new Error('제출 실패')
+
+      setUploadProgress(100)
+      setIsUploading(false)
+      setStep3Done(true)
+      toast.success('원고가 성공적으로 제출되었습니다.')
+    } catch (error) {
+      console.error('업로드 오류:', error)
+      setIsUploading(false)
+      setUploadProgress(0)
+      toast.error('업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
     }
   }
 
-  const influencerName = infData?.influencer_name || '유리쿡'
-  const campaignTitle = infData?.campaign_title || '쿠쿠 트윈프레셔 신제품 런칭'
-  const clientName = infData?.client_name || 'CUCKOO'
-  const channelLabel = infData?.channel_label || '인스타 릴스'
-  const proposedFee = infData?.proposed_fee_formatted || '₩800,000'
-  const contentDeadline = infData?.content_deadline || '06.08'
-  const postPeriod = infData?.post_period || '06.10 ~ 06.20'
-  const requiredTags = infData?.required_tags || '#신혼집밥 외 1'
+  const influencerName = infData?.influencer_name || '인플루언서'
+  const campaignTitle = infData?.campaign_title || '신제품 런칭 캠페인'
+  const clientName = infData?.client_name || '광고주'
+  const channelLabel = infData?.channel_label || '인스타그램'
+  const proposedFee = infData?.proposed_fee_formatted || '₩500,000'
+  const contentDeadline = infData?.content_deadline || '-'
+  const postPeriod = infData?.post_period || '-'
+  const requiredTags = infData?.required_tags || '#신제품'
+
+  const isSubmitDisabled = !selectedFile || !caption.trim() || isUploading
 
   return (
     <div className="phone select-none">
+      {/* 숨겨진 File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          setSelectedFile(file)
+          if (file.type.startsWith('image/')) {
+            setPreviewUrl(URL.createObjectURL(file))
+          } else {
+            setPreviewUrl(null)
+          }
+        }}
+      />
+
       {/* Header */}
       <div className="mhead">
         <div className="brand">
@@ -178,7 +250,7 @@ export default function InfPage({ params }: PageProps) {
             <rect x="4" y="10" width="16" height="11" rx="2" stroke="#9a9ba5" strokeWidth="1.7" />
             <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#9a9ba5" strokeWidth="1.7" />
           </svg>
-          라운드미디어가 보낸 안전한 링크
+          안전한 협업 링크
         </div>
       </div>
 
@@ -358,52 +430,164 @@ export default function InfPage({ params }: PageProps) {
             </span>
           ) : (
             <div>
-              <div
-                onClick={() => setSelectedFile('demo_draft_v1.mp4')}
-                style={{
-                  width: '100%',
-                  height: '150px',
-                  borderRadius: '14px',
-                  background: 'var(--gray)',
-                  border: '1px solid var(--dark)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  color: 'var(--muted)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" style={{ width: 32, height: 32 }}>
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M17 8l-5-5-5 5" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M12 3v12" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-                {selectedFile ? (
-                  <span className="text-xs font-semibold text-[var(--dark)]">
-                    선택된 파일: {selectedFile}
+              {/* 업로드 영역 */}
+              {!selectedFile ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: '100%',
+                    minHeight: '140px',
+                    borderRadius: '14px',
+                    background: 'var(--gray)',
+                    border: '1px solid var(--dark)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    padding: '20px',
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" style={{ width: 32, height: 32 }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" />
+                    <path d="M17 8l-5-5-5 5" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 3v12" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <span style={{ fontWeight: 500, color: 'var(--dark)' }}>
+                    원고 파일 업로드 (영상·이미지)
                   </span>
-                ) : (
-                  '원고 파일 업로드 (영상·이미지)'
-                )}
-              </div>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                    클릭하여 사진 또는 동영상 선택
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    borderRadius: '14px',
+                    background: 'var(--gray)',
+                    border: '1px solid var(--dark)',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="미리보기"
+                      style={{
+                        maxHeight: '140px',
+                        maxWidth: '100%',
+                        borderRadius: '8px',
+                        objectFit: 'contain',
+                        border: '1px solid var(--line-soft)',
+                      }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: '36px' }}>🎬</div>
+                  )}
 
-              <form onSubmit={handleSubmitDraft} className="field mt-2.5">
+                  <div style={{ textAlign: 'center', minWidth: 0, width: '100%' }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        color: 'var(--dark)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {selectedFile.name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {formatFileSize(selectedFile.size)}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--dark)',
+                      background: 'white',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    다시 선택
+                  </button>
+                </div>
+              )}
+
+              {/* 업로드 중 진행 상태 UI */}
+              {isUploading && (
+                <div style={{ marginTop: '12px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '12px',
+                      color: 'var(--muted)',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <span>업로드 중...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '8px',
+                      background: 'var(--gray)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--line-soft)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${uploadProgress}%`,
+                        height: '100%',
+                        background: 'var(--green)',
+                        transition: 'width 0.3s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="field mt-3">
                 <textarea
                   placeholder="캡션 원고를 입력하세요 (#필수태그 포함)"
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
+                  disabled={isUploading}
                 />
                 <button
                   type="submit"
-                  disabled={isSubmitting3}
-                  className="mbtn dark cursor-pointer"
+                  disabled={isSubmitDisabled}
+                  className="mbtn dark"
+                  style={{
+                    opacity: isSubmitDisabled ? 0.5 : 1,
+                    cursor: isSubmitDisabled ? 'not-allowed' : 'pointer',
+                  }}
                 >
-                  {isSubmitting3 ? '제출 중...' : '원고 제출하기'}
+                  {isUploading ? `업로드 중 (${uploadProgress}%)` : '원고 제출하기'}
                 </button>
               </form>
+
               <p className="muted" style={{ fontSize: '12px', textAlign: 'center', marginTop: '4px' }}>
                 제출 후에도 운영팀 피드백에 따라 재제출할 수 있어요.
               </p>

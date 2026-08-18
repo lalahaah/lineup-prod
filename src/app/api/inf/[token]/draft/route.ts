@@ -27,6 +27,7 @@ export async function POST(
     let caption = ''
     let hashtags = ''
     let note = ''
+    let plannedUploadAt = new Date().toISOString()
     let fileUrls: string[] = []
 
     const contentType = request.headers.get('content-type') || ''
@@ -36,6 +37,7 @@ export async function POST(
       caption = (formData.get('caption') as string) || ''
       hashtags = (formData.get('hashtags') as string) || ''
       note = (formData.get('note') as string) || ''
+      plannedUploadAt = (formData.get('planned_upload_at') as string) || new Date().toISOString()
 
       const files = formData.getAll('file') as File[]
       for (const file of files) {
@@ -50,7 +52,7 @@ export async function POST(
             .from('drafts')
             .upload(storagePath, buffer, {
               contentType: file.type || 'application/octet-stream',
-              upsert: true
+              upsert: true,
             })
 
           if (!uploadError && uploadData) {
@@ -71,6 +73,7 @@ export async function POST(
       caption = body.caption || ''
       hashtags = body.hashtags || ''
       note = body.note || ''
+      plannedUploadAt = body.planned_upload_at || new Date().toISOString()
       if (body.file_url) fileUrls.push(body.file_url)
       if (Array.isArray(body.file_urls)) fileUrls.push(...body.file_urls)
     }
@@ -83,21 +86,23 @@ export async function POST(
       .order('version', { ascending: false })
       .limit(1)
 
-    const maxVersion = existingDrafts && existingDrafts.length > 0 ? existingDrafts[0].version : 0
-    const newVersion = maxVersion + 1
+    const nextVersion = existingDrafts?.[0]?.version
+      ? existingDrafts[0].version + 1
+      : 1
 
     // 3. drafts INSERT (status: 'submitted')
     const { data: newDraft, error: insertError } = await supabase
       .from('drafts')
       .insert({
         campaign_influencer_id: ci.id,
-        version: newVersion,
+        version: nextVersion,
+        file_urls: fileUrls,
         caption: caption || null,
         hashtags: hashtags || null,
         note: note || null,
-        file_urls: fileUrls,
+        planned_upload_at: plannedUploadAt,
         status: 'submitted',
-        submitted_at: new Date().toISOString()
+        submitted_at: new Date().toISOString(),
       })
       .select()
       .single()
@@ -114,8 +119,8 @@ export async function POST(
       type: 'draft_submitted',
       actor_type: 'influencer',
       actor_name: infName,
-      description: `${infName} 님이 원고 v${newVersion}을(를) 제출했습니다.`,
-      metadata: { draft_id: newDraft.id, version: newVersion }
+      description: `${infName} 님이 원고 v${nextVersion}을(를) 제출했습니다.`,
+      metadata: { draft_id: newDraft.id, version: nextVersion },
     })
 
     return NextResponse.json({

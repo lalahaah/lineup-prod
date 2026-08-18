@@ -23,6 +23,7 @@ export interface CampaignDetailData {
   categories?: string[]
   attachment_urls?: string[]
   post_period: string
+  upload_deadline?: string
   hashtags: string[]
   budget?: number | null
 }

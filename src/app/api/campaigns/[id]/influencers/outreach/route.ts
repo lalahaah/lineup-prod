@@ -1,13 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email'
 import { InfluencerOutreach } from '@/lib/email/templates/InfluencerOutreach'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id: campaignId } = await params
 
   try {
     const supabase = createServiceClient()
@@ -18,89 +18,113 @@ export async function POST(
       // Body may be empty
     }
 
-    const targetCiIds: string[] = Array.isArray(body.influencer_ids) && body.influencer_ids.length > 0
-      ? body.influencer_ids
-      : []
+    const influencer_ids: string[] = Array.isArray(body.influencer_ids) ? body.influencer_ids : []
 
-    if (targetCiIds.length === 0) {
-      // Fetch all selected campaign_influencers
-      const { data: selectedCiList } = await supabase
-        .from('campaign_influencers')
-        .select('id')
-        .eq('campaign_id', id)
-        .in('status', ['selected', 'confirmed', 'candidate'])
-
-      if (selectedCiList && selectedCiList.length > 0) {
-        selectedCiList.forEach((ci) => targetCiIds.push(ci.id))
-      }
-    }
-
-    let sentCount = 0
-
-    // Fetch campaign info for email details
-    const { data: campaign } = await supabase
+    // 캠페인 정보 조회
+    const { data: campaign, error: campError } = await supabase
       .from('campaigns')
-      .select('*, clients(name)')
-      .eq('id', id)
+      .select(`
+        *,
+        clients (name)
+      `)
+      .eq('id', campaignId)
       .single()
 
-    const brandName = typeof campaign?.clients === 'object' && campaign?.clients !== null
-      ? (campaign.clients as any).name || 'Lineup'
-      : campaign?.name || 'Lineup'
+    if (campError || !campaign) {
+      return NextResponse.json({ error: '캠페인을 찾을 수 없습니다.' }, { status: 404 })
+    }
 
-    for (const targetId of targetCiIds) {
-      const { data: ciRecord } = await supabase
-        .from('campaign_influencers')
-        .select('*, influencers(*)')
-        .eq('id', targetId)
-        .single()
+    // 대상 인플루언서 조회
+    let query = supabase
+      .from('campaign_influencers')
+      .select(`
+        id,
+        influencer_id,
+        proposed_fee,
+        access_token,
+        influencers (
+          id,
+          name,
+          email
+        )
+      `)
+      .eq('campaign_id', campaignId)
 
-      if (!ciRecord) continue
+    if (influencer_ids.length > 0) {
+      query = query.in('id', influencer_ids)
+    }
 
-      const inf = (ciRecord.influencers as any) || {}
-      const recipientEmail = inf.email
-      if (!recipientEmail) continue
+    const { data: targets, error: targetError } = await query
 
-      const recipientName = inf.name || '인플루언서'
-      const responseToken = ciRecord.access_token || 'mock-inf-token-001'
-      const responseLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/inf/${responseToken}`
+    if (targetError || !targets) {
+      return NextResponse.json({ error: '인플루언서 조회 실패' }, { status: 500 })
+    }
 
-      await sendEmail({
-        to: recipientEmail,
-        subject: `[${brandName}] ${campaign?.name || '캠페인'} 협업 제안드립니다`,
-        campaignId: id,
-        influencerId: targetId,
+    let sent = 0
+    let failed = 0
+    const brandName = (campaign.clients as any)?.name || campaign.name || 'Lineup'
+
+    for (const ci of targets) {
+      const inf = (ci.influencers as any) || {}
+      if (!inf.email) {
+        failed++
+        continue
+      }
+
+      const result = await sendEmail({
+        to: inf.email,
+        subject: `[${brandName}] 협찬 제안 드립니다`,
         react: InfluencerOutreach({
-          influencerName: recipientName,
-          campaignName: campaign?.name || '캠페인',
-          brandName,
-          productName: campaign?.product_name || '신제품',
-          contentDeadline: campaign?.content_deadline || '06.08',
-          uploadDeadline: campaign?.upload_deadline || '06.10',
-          fee: `₩${((((ciRecord as any)?.agreed_fee || (ciRecord as any)?.proposed_fee || inf.fee_min || 500000)) / 10000).toFixed(0)}만`,
-          responseLink,
-          managerName: '담당자',
+          influencerName: inf.name || '인플루언서',
+          brandName: brandName,
+          campaignName: campaign.name || '캠페인',
+          productName: campaign.product_name || '',
+          contentDeadline: campaign.content_deadline 
+            ? new Date(campaign.content_deadline).toLocaleDateString('ko-KR')
+            : '미정',
+          uploadDeadline: (campaign as any).upload_deadline
+            ? new Date((campaign as any).upload_deadline).toLocaleDateString('ko-KR')
+            : (campaign as any).post_period || '미정',
+          fee: ci.proposed_fee ? Number(ci.proposed_fee) : undefined,
+          responseLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/inf/${ci.access_token}`,
+          managerName: '라운드미디어 담당자',
         }),
       })
 
-      // Update status to outreached / confirmed
-      if (ciRecord.status === 'selected') {
-        await supabase
-          .from('campaign_influencers')
-          .update({ status: 'confirmed' })
-          .eq('id', targetId)
-      }
+      if (result.success) {
+        sent++
+        // contact_logs 기록
+        try {
+          await supabase.from('contact_logs').insert({
+            influencer_id: ci.influencer_id || inf.id,
+            campaign_id: campaignId,
+            type: 'email',
+            direction: 'outbound',
+            subject: `[${brandName}] 협찬 제안 드립니다`,
+            template_id: 'influencer_outreach',
+            sent_at: new Date().toISOString(),
+          })
+        } catch (logErr) {
+          console.warn('contact_logs insert warning:', logErr)
+        }
 
-      sentCount++
+        // campaign_influencers 상태 업데이트
+        try {
+          await supabase
+            .from('campaign_influencers')
+            .update({ status: 'confirmed' })
+            .eq('id', ci.id)
+        } catch (updateErr) {
+          console.warn('campaign_influencers update warning:', updateErr)
+        }
+      } else {
+        failed++
+      }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `${sentCount}명에게 섭외 이메일이 발송됐습니다`,
-      sentCount,
-    })
+    return NextResponse.json({ sent, failed })
   } catch (error: any) {
-    console.error('Error sending bulk outreach email:', error)
-    return NextResponse.json({ error: error.message || 'Failed to send outreach email' }, { status: 500 })
+    console.error('Outreach error:', error)
+    return NextResponse.json({ error: error.message || '서버 오류' }, { status: 500 })
   }
 }

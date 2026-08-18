@@ -12,10 +12,8 @@ import { CHANNEL_LABELS } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog'
 
 interface CampaignDetailClientProps {
@@ -159,6 +157,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
 
   // Send to Client Modal state (광고주에게 보내기 모달)
   const [isSendModalOpen, setIsSendModalOpen] = useState(false)
+  const [sendModalMode, setSendModalMode] = useState<'preparing' | 'additional'>('preparing')
   const [isSendingToClient, setIsSendingToClient] = useState(false)
 
   // Outreach Modal state (일괄 섭외 모달)
@@ -202,19 +201,36 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     }
   }
 
-  // 2. 준비중 -> 광고주 검토 모달 열기
-  const handleOpenSendModal = () => {
+  // 2. 준비중 단계에서 "광고주에게 보내기" 클릭
+  const handleOpenPreparingSendModal = () => {
     if (selectedPreparingIds.length === 0) {
       toast.error('광고주에게 전달할 인플루언서를 최소 1명 이상 선택해 주세요.')
       return
     }
+    setSendModalMode('preparing')
     setIsSendModalOpen(true)
   }
 
-  // 3. 모달에서 "전달하고 링크 복사" 클릭 시 실행
+  // 3. 광고주 검토 / 섭외중 단계에서 "추가 후보 전달하기" 클릭
+  const handleOpenAdditionalSendModal = () => {
+    const candidateInfluencers = influencers.filter((inf) => inf.status === 'candidate')
+    if (candidateInfluencers.length === 0) {
+      toast.info('추가된 신규 후보가 없습니다. 먼저 인플루언서를 추가해주세요.')
+      return
+    }
+    setSendModalMode('additional')
+    setIsSendModalOpen(true)
+  }
+
+  // 4. 모달에서 "전달하고 링크 복사" 클릭 시 실행
   const handleConfirmSendToClient = async () => {
-    if (selectedPreparingIds.length === 0) {
-      toast.error('최소 1명 이상의 인플루언서를 선택해 주세요.')
+    const targetInfluencers =
+      sendModalMode === 'additional'
+        ? influencers.filter((inf) => inf.status === 'candidate')
+        : influencers.filter((inf) => selectedPreparingIds.includes(inf.id))
+
+    if (targetInfluencers.length === 0) {
+      toast.error('전달할 인플루언서가 없습니다.')
       return
     }
 
@@ -222,42 +238,41 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     const portalUrl = getPortalUrl()
 
     try {
-      // ① PATCH /api/campaigns/[id] { stage: 'client_review' }
-      const res = await fetch(`/api/campaigns/${campaign.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage: 'client_review' }),
-      })
-
-      if (!res.ok) {
-        toast.error('단계 변경 실패')
-        return
+      // 1. stage 업데이트 (준비중 단계일 경우 광고주 검토 단계로 변경)
+      if (campaign.stage === 'preparing') {
+        const res = await fetch(`/api/campaigns/${campaign.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage: 'client_review' }),
+        })
+        if (res.ok) {
+          setCampaign((prev) => ({ ...prev, stage: 'client_review' }))
+        }
       }
 
-      setCampaign((prev) => ({ ...prev, stage: 'client_review' }))
+      // 2. 클립보드 복사
+      await navigator.clipboard.writeText(portalUrl)
 
-      // ② 클립보드에 포털 링크 복사
-      try {
-        await navigator.clipboard.writeText(portalUrl)
-      } catch (err) {
-        console.error('Clipboard copy error:', err)
-      }
-
-      // ③ 모달 닫기
+      // 3. 모달 닫기
       setIsSendModalOpen(false)
 
-      // ④ sonner toast 2개 순서대로
-      toast.success('캠페인이 광고주 검토 단계로 이동했습니다 ✅')
-      toast.success('포털 링크가 복사됐습니다. 광고주에게 전달해주세요 🔗')
-    } catch (err) {
-      console.error(err)
-      toast.error('단계 변경 중 오류가 발생했습니다.')
+      // 4. 토스트
+      toast.success('광고주 검토 단계로 이동했습니다 ✅')
+      setTimeout(() => {
+        toast.success('포털 링크가 복사됐습니다 🔗')
+      }, 500)
+
+      // 5. 페이지 새로고침 (스테이지 업데이트 반영)
+      router.refresh()
+    } catch (error) {
+      console.error('Error sending to client:', error)
+      toast.error('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setIsSendingToClient(false)
     }
   }
 
-  // 4. 광고주 검토 완료 -> 섭외중 단계 수동 이동
+  // 5. 광고주 검토 완료 -> 섭외중 단계 수동 이동
   const handleCompleteClientReview = async () => {
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
@@ -269,13 +284,14 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
       if (res.ok) {
         setCampaign((prev) => ({ ...prev, stage: 'outreaching' }))
         toast.success('섭외중 단계로 이동했습니다 ✉️')
+        router.refresh()
       }
     } catch (err) {
       console.error(err)
     }
   }
 
-  // 5. 일괄 섭외 이메일 발송
+  // 6. 일괄 섭외 이메일 발송
   const handleBatchOutreach = async () => {
     const selectedList = influencers.filter((inf) => inf.status === 'selected' || (inf as any).badge_label === '선택' || true)
     if (selectedList.length === 0) {
@@ -314,7 +330,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     }
   }
 
-  // 6. 섭외중 -> 원고 검수 단계 이동
+  // 7. 섭외중 -> 원고 검수 단계 이동
   const handleMoveToReviewing = async () => {
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
@@ -327,6 +343,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
         setCampaign((prev) => ({ ...prev, stage: 'reviewing' }))
         setActiveTab('review')
         toast.success('원고 검수 단계로 이동했습니다 📝')
+        router.refresh()
       }
     } catch (err) {
       console.error(err)
@@ -379,10 +396,13 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     toast.error(`${currentInfo.name} 님의 원고를 반려했습니다.`)
   }
 
-  const selectedPreparingInfluencers = influencers.filter((inf) =>
-    selectedPreparingIds.includes(inf.id)
-  )
+  // 모달에 노출할 인플루언서 목록
+  const modalTargetInfluencers =
+    sendModalMode === 'additional'
+      ? influencers.filter((inf) => inf.status === 'candidate')
+      : influencers.filter((inf) => selectedPreparingIds.includes(inf.id))
 
+  const candidateCount = influencers.filter((inf) => inf.status === 'candidate').length
   const portalUrl = getPortalUrl()
 
   return (
@@ -632,7 +652,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                   <button
                     type="button"
                     disabled={selectedPreparingIds.length === 0}
-                    onClick={handleOpenSendModal}
+                    onClick={handleOpenPreparingSendModal}
                     className="btn btn-green font-sans cursor-pointer"
                     style={{
                       opacity: selectedPreparingIds.length === 0 ? 0.5 : 1,
@@ -657,12 +677,28 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                   padding: '24px',
                 }}
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-[var(--dark)]">광고주 검토 진행 중</h2>
-                    <p className="text-xs text-[var(--muted)]">광고주가 포털에서 인플루언서를 선택/패스하고 있습니다.</p>
+                    <p className="text-xs text-[var(--muted)]">광고주 검토 중입니다. 후보를 추가할 수 있습니다.</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/influencers')}
+                      className="btn btn-ghost font-sans text-xs cursor-pointer"
+                    >
+                      + 인플루언서 추가
+                    </button>
+                    {candidateCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAdditionalSendModal}
+                        className="btn btn-ghost font-sans text-xs cursor-pointer"
+                      >
+                        추가 후보 전달하기 ({candidateCount}명)
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => window.open(`/portal/${campaign.portal_token}`, '_blank')}
@@ -702,7 +738,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                           ) : inf.status === 'passed' ? (
                             <span className="badge danger">광고주 패스</span>
                           ) : (
-                            <span className="badge gray">검토 대기</span>
+                            <span className="badge gray">검토 대기 (후보)</span>
                           )
                         return (
                           <tr key={inf.id}>
@@ -743,18 +779,36 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                   padding: '24px',
                 }}
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-[var(--dark)]">인플루언서 섭외 진행 중</h2>
-                    <p className="text-xs text-[var(--muted)]">광고주가 선택한 인플루언서에게 섭외 요청을 발송하세요.</p>
+                    <p className="text-xs text-[var(--muted)]">섭외 진행 중입니다. 추가 후보를 넣을 수 있습니다.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsOutreachModalOpen(true)}
-                    className="btn btn-green font-sans text-xs cursor-pointer"
-                  >
-                    ✉️ 일괄 섭외 이메일 발송
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/influencers')}
+                      className="btn btn-ghost font-sans text-xs cursor-pointer"
+                    >
+                      + 인플루언서 추가
+                    </button>
+                    {candidateCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAdditionalSendModal}
+                        className="btn btn-ghost font-sans text-xs cursor-pointer"
+                      >
+                        추가 후보 전달하기 ({candidateCount}명)
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsOutreachModalOpen(true)}
+                      className="btn btn-green font-sans text-xs cursor-pointer"
+                    >
+                      ✉️ 일괄 섭외 이메일 발송
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto border border-[var(--dark)] rounded-xl mb-4">
@@ -778,6 +832,8 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                             <span className="badge soft">✓ 섭외 확정</span>
                           ) : inf.status === 'rejected' ? (
                             <span className="badge danger">✕ 거절</span>
+                          ) : inf.status === 'candidate' ? (
+                            <span className="badge gray">후보 (미전달)</span>
                           ) : (
                             <span className="badge warn">⏳ 응답 대기</span>
                           )
@@ -1053,48 +1109,99 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
       <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
         <DialogContent
           showCloseButton={true}
-          className="max-w-lg w-full bg-[var(--white)] border border-[var(--dark)] rounded-[var(--r-lg)] shadow-[var(--shadow)] p-6 gap-5 sm:max-w-lg"
+          style={{
+            maxWidth: '480px',
+            width: '100%',
+            padding: '24px',
+            background: 'var(--white)',
+            border: '1px solid var(--dark)',
+            borderRadius: 'var(--r-lg)',
+            boxShadow: 'var(--shadow)',
+          }}
+          className="gap-0"
         >
-          <DialogHeader className="gap-1.5 border-b border-[var(--line-soft)] pb-3 text-left">
-            <DialogTitle className="text-lg font-bold text-[var(--dark)] font-sans">
-              광고주에게 후보를 전달합니다
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[var(--muted)] leading-relaxed font-sans">
-              선택한 <b>{selectedPreparingIds.length}명</b>의 인플루언서를 광고주 포털에 공개합니다.<br />
-              광고주가 포털 링크에 접속하면 아래 후보를 확인할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
+          {/* [제목] font-size: 18px, font-weight: 600, margin-bottom: 8px */}
+          <DialogTitle
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: 'var(--dark)',
+              marginBottom: '8px',
+              fontFamily: 'inherit',
+            }}
+          >
+            {sendModalMode === 'additional' ? '광고주에게 추가 후보를 전달합니다' : '광고주에게 후보를 전달합니다'}
+          </DialogTitle>
 
-          {/* 선택된 인플루언서 미리보기 리스트 */}
-          <div className="flex flex-col gap-2">
-            <div className="text-xs font-bold text-[var(--dark)]">
-              선택된 인플루언서 ({selectedPreparingInfluencers.length}명)
+          {/* [설명 텍스트] font-size: 14px, color: var(--muted), margin-bottom: 20px */}
+          <DialogDescription
+            style={{
+              fontSize: '14px',
+              color: 'var(--muted)',
+              marginBottom: '20px',
+              lineHeight: 1.5,
+              fontFamily: 'inherit',
+            }}
+          >
+            선택한 <b>{modalTargetInfluencers.length}명</b>의 인플루언서를 광고주 포털에 공개합니다.<br />
+            광고주가 포털 링크에 접속하면 아래 후보를 확인할 수 있습니다.
+          </DialogDescription>
+
+          {/* [선택된 인플루언서 섹션] */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '8px', fontWeight: 500 }}>
+              선택된 인플루언서 ({modalTargetInfluencers.length}명)
             </div>
-            <div className="max-h-48 overflow-y-auto border border-[var(--dark)] rounded-xl divide-y divide-[var(--line-soft)] bg-[var(--white)]">
-              {selectedPreparingInfluencers.length === 0 ? (
-                <div className="p-4 text-center text-xs text-[var(--muted)]">
+            <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '2px' }}>
+              {modalTargetInfluencers.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--muted)' }}>
                   선택된 인플루언서가 없습니다.
                 </div>
               ) : (
-                selectedPreparingInfluencers.map((inf, idx) => {
+                modalTargetInfluencers.map((inf, idx) => {
                   const infData = getInfluencerInfo(inf)
                   const avatarInitial = infData.name ? infData.name[0] : '?'
                   const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
 
                   return (
-                    <div key={inf.id} className="flex items-center justify-between p-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className={`av sm ${avatarColorClass}`}>{avatarInitial}</span>
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm text-[var(--dark)] truncate">{infData.name}</div>
+                    <div
+                      key={inf.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        padding: '10px 14px',
+                        border: '1px solid var(--line-soft)',
+                        borderRadius: '12px',
+                        marginBottom: '8px',
+                        background: 'var(--white)',
+                      }}
+                    >
+                      {/* 좌: 아바타(32px) + 이름(font-weight 500) + 핸들(muted, 12px) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <span
+                          className={`av sm ${avatarColorClass}`}
+                          style={{ width: '32px', height: '32px', fontSize: '13px', flexShrink: 0 }}
+                        >
+                          {avatarInitial}
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 500, fontSize: '14px', color: 'var(--dark)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {infData.name}
+                          </div>
                           {infData.handle && (
-                            <div className="text-xs text-[var(--muted)] truncate">{infData.handle}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {infData.handle}
+                            </div>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+
+                      {/* 우: 채널 아이콘 + 채널명 + 팔로워수 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, fontSize: '13px' }}>
                         {renderChannelBadge(infData.primaryChannel)}
-                        <span className="font-semibold text-[var(--dark)]">
+                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>
                           {formatFollowers(infData.followers, infData.primaryChannel)}
                         </span>
                       </div>
@@ -1105,28 +1212,69 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
             </div>
           </div>
 
-          {/* 포털 링크 미리보기 */}
-          <div className="flex flex-col gap-1.5">
-            <div className="text-xs font-bold text-[var(--dark)]">포털 링크 미리보기</div>
-            <div className="flex items-center gap-2 bg-[var(--gray)] border border-[var(--line-soft)] rounded-xl p-2.5">
-              <span className="text-xs font-mono text-[var(--dark)] truncate flex-1 select-all">
+          {/* [포털 링크 섹션] */}
+          <div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '8px', fontWeight: 500 }}>
+              광고주 포털 링크
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--gray)',
+                border: '1px solid var(--line-soft)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '13px',
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'monospace',
+                  color: 'var(--dark)',
+                }}
+              >
                 {portalUrl}
               </span>
               <button
                 type="button"
                 onClick={handleCopyModalPortalLink}
-                className="btn btn-ghost font-sans text-xs py-1.5 px-3 cursor-pointer flex-shrink-0"
+                style={{
+                  fontSize: '13px',
+                  padding: '6px 12px',
+                  border: '1px solid var(--dark)',
+                  borderRadius: '8px',
+                  background: 'white',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all .15s',
+                }}
+                className="hover:bg-[var(--dark)] hover:text-white"
               >
                 복사
               </button>
             </div>
           </div>
 
-          <DialogFooter className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--line-soft)] mt-2 -mx-0 -mb-0 bg-transparent rounded-none p-0">
+          {/* [버튼 영역] margin-top: 24px, display: flex, justify-content: flex-end, gap: 8px */}
+          <div
+            style={{
+              marginTop: '24px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+            }}
+          >
             <button
               type="button"
               onClick={() => setIsSendModalOpen(false)}
-              className="btn btn-ghost font-sans text-xs cursor-pointer"
+              className="btn btn-ghost font-sans cursor-pointer"
+              style={{ fontSize: '14px', padding: '10px 18px' }}
               disabled={isSendingToClient}
             >
               취소
@@ -1134,12 +1282,13 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
             <button
               type="button"
               onClick={handleConfirmSendToClient}
-              disabled={isSendingToClient || selectedPreparingIds.length === 0}
-              className="btn btn-green font-sans text-xs cursor-pointer"
+              disabled={isSendingToClient || modalTargetInfluencers.length === 0}
+              className="btn btn-green font-sans cursor-pointer"
+              style={{ fontSize: '14px', padding: '10px 18px', fontWeight: 500 }}
             >
               {isSendingToClient ? '전달 중...' : '전달하고 링크 복사'}
             </button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

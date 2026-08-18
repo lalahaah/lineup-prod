@@ -21,11 +21,11 @@ export function CampaignDraftsClient({
 }: CampaignDraftsClientProps) {
   const [influencers, setInfluencers] = useState<InfluencerDraftOverview[]>(initialInfluencers)
   const [activeInfId, setActiveInfId] = useState<string>(
-    selectedInfluencerId || initialInfluencers[0]?.influencer_id || 'inf-2'
+    selectedInfluencerId || initialInfluencers[0]?.influencer_id || ''
   )
 
   const activeInfluencer =
-    influencers.find((i) => i.influencer_id === activeInfId) || influencers[0]
+    influencers.find((i) => i.influencer_id === activeInfId || i.ci_id === activeInfId) || influencers[0]
 
   const handleCopyPortalLink = () => {
     const link = `${window.location.origin}/portal/${campaign.portal_token}`
@@ -43,22 +43,25 @@ export function CampaignDraftsClient({
       if (res.ok) {
         setInfluencers((prev) =>
           prev.map((item) => {
-            if (item.influencer_id === activeInfluencer.influencer_id) {
+            if (item.influencer_id === activeInfluencer?.influencer_id) {
               const updatedDrafts = item.drafts.map((d) =>
                 d.id === draftId ? { ...d, status: 'agency_approved' as const } : d
               )
               return {
                 ...item,
                 status_label: '승인',
-                status_variant: 'soft',
+                status_variant: 'green' as const,
                 drafts: updatedDrafts,
                 current_draft: updatedDrafts.find((d) => d.id === draftId) || item.current_draft,
+                latest_draft: updatedDrafts.find((d) => d.id === draftId) || item.latest_draft,
               }
             }
             return item
           })
         )
         toast.success('승인됐습니다. 광고주에게 전달됩니다.')
+      } else {
+        toast.error('승인 처리에 실패했습니다.')
       }
     } catch (err) {
       console.error(err)
@@ -76,7 +79,7 @@ export function CampaignDraftsClient({
       if (res.ok) {
         setInfluencers((prev) =>
           prev.map((item) => {
-            if (item.influencer_id === activeInfluencer.influencer_id) {
+            if (item.influencer_id === activeInfluencer?.influencer_id) {
               const updatedDrafts = item.drafts.map((d) => {
                 if (d.id === draftId) {
                   return {
@@ -87,9 +90,9 @@ export function CampaignDraftsClient({
                       {
                         id: `fb-${Date.now()}`,
                         author_type: 'agency' as const,
-                        author_name: '김현우',
+                        author_name: '에이전시 매니저',
                         author_role: '운영',
-                        avatar_initial: '우',
+                        avatar_initial: '운',
                         avatar_color_class: 'c1',
                         content: feedback,
                         created_at: '방금 전',
@@ -102,16 +105,19 @@ export function CampaignDraftsClient({
               })
               return {
                 ...item,
-                status_label: '수정요청',
-                status_variant: 'danger',
+                status_label: '수정 요청',
+                status_variant: 'danger' as const,
                 drafts: updatedDrafts,
                 current_draft: updatedDrafts.find((d) => d.id === draftId) || item.current_draft,
+                latest_draft: updatedDrafts.find((d) => d.id === draftId) || item.latest_draft,
               }
             }
             return item
           })
         )
         toast.success('수정 요청이 전달됐습니다.')
+      } else {
+        toast.error('수정 요청 전송에 실패했습니다.')
       }
     } catch (err) {
       console.error(err)
@@ -129,29 +135,33 @@ export function CampaignDraftsClient({
       if (res.ok) {
         setInfluencers((prev) =>
           prev.map((item) => {
-            if (item.influencer_id === activeInfluencer.influencer_id) {
+            if (item.influencer_id === activeInfluencer?.influencer_id) {
               const updatedDrafts = item.drafts.map((d) =>
                 d.id === draftId ? { ...d, status: 'rejected' as const } : d
               )
               return {
                 ...item,
                 status_label: '반려',
-                status_variant: 'gray',
+                status_variant: 'gray' as const,
                 drafts: updatedDrafts,
                 current_draft: updatedDrafts.find((d) => d.id === draftId) || item.current_draft,
+                latest_draft: updatedDrafts.find((d) => d.id === draftId) || item.latest_draft,
               }
             }
             return item
           })
         )
         toast.error('원고가 반려 처리됐습니다.')
+      } else {
+        toast.error('반려 처리에 실패했습니다.')
       }
     } catch (err) {
       console.error(err)
+      toast.error('반려 처리에 실패했습니다.')
     }
   }
 
-  const approvedCount = influencers.filter((i) => i.status_label === '승인').length
+  const approvedCount = influencers.filter((i) => i.status_label === '승인' || i.status_label === '승인 완료').length
 
   return (
     <div className="main select-none">
@@ -176,14 +186,16 @@ export function CampaignDraftsClient({
         </div>
         <div className="spacer" />
         <span className="badge dark">{campaign.client}</span>
-        <span className="dday hot">{campaign.dday}</span>
-        <button
-          type="button"
-          onClick={handleCopyPortalLink}
-          className="btn btn-ghost font-sans cursor-pointer"
-        >
-          포털 링크 복사
-        </button>
+        {campaign.dday && <span className="dday hot">{campaign.dday}</span>}
+        {campaign.portal_token && (
+          <button
+            type="button"
+            onClick={handleCopyPortalLink}
+            className="btn btn-ghost font-sans cursor-pointer"
+          >
+            포털 링크 복사
+          </button>
+        )}
       </header>
 
       {/* Main Content */}
@@ -224,7 +236,7 @@ export function CampaignDraftsClient({
               <b style={{ fontSize: '16px' }}>원고 검수 · Review</b>
             </div>
             <span className="muted" style={{ fontSize: '13px' }}>
-              담당 {campaign.assignee} · 인플루언서 {influencers.length}명
+              담당 {campaign.assignee} · 참여 인플루언서 {influencers.length}명
             </span>
           </div>
 
@@ -251,7 +263,6 @@ export function CampaignDraftsClient({
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-
                   alignItems: 'center',
                   marginBottom: '6px',
                   padding: '0 4px',
@@ -265,11 +276,14 @@ export function CampaignDraftsClient({
 
               <div className="inf-list">
                 {influencers.map((inf) => {
-                  const isSelected = inf.influencer_id === activeInfId
+                  const isSelected =
+                    inf.influencer_id === activeInfluencer?.influencer_id ||
+                    inf.ci_id === activeInfluencer?.ci_id
+
                   return (
                     <div
-                      key={inf.influencer_id}
-                      onClick={() => setActiveInfId(inf.influencer_id)}
+                      key={inf.ci_id || inf.influencer_id}
+                      onClick={() => setActiveInfId(inf.influencer_id || inf.ci_id)}
                       className={`inf-row ${isSelected ? 'sel' : ''}`}
                     >
                       <span className={`av ${inf.avatar_color_class || 'c1'}`}>
@@ -278,8 +292,8 @@ export function CampaignDraftsClient({
                       <div className="info">
                         <div className="nm">{inf.name}</div>
                         <div className="st">
-                          {inf.current_draft
-                            ? `원고 v${inf.current_draft.version} 검수 대기`
+                          {inf.latest_draft || inf.current_draft
+                            ? `원고 v${(inf.latest_draft || inf.current_draft)?.version} ${inf.status_label}`
                             : '원고 미제출'}
                         </div>
                       </div>
@@ -307,40 +321,57 @@ export function CampaignDraftsClient({
               <div className="grid-2" style={{ gap: '14px' }}>
                 <div className="kv">
                   <b>제품</b>
-                  {campaign.product_name}
+                  {campaign.product_name || '-'}
                 </div>
                 <div className="kv">
                   <b>채널</b>
-                  {campaign.channels_text}
+                  {campaign.channels_text || '-'}
                 </div>
                 <div className="kv">
                   <b>원고 마감</b>
-                  {campaign.content_deadline}
+                  {campaign.content_deadline || '-'}
                 </div>
                 <div className="kv">
                   <b>게시 기간</b>
-                  {campaign.post_period}
+                  {campaign.post_period || '-'}
                 </div>
               </div>
-              <div className="guide-row">
-                {campaign.hashtags.map((tag, idx) => (
-                  <span key={idx} className="badge gray">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {campaign.hashtags && campaign.hashtags.length > 0 && (
+                <div className="guide-row" style={{ marginTop: 12 }}>
+                  {campaign.hashtags.map((tag, idx) => (
+                    <span key={idx} className="badge gray">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right Column (1fr) */}
-          {activeInfluencer && (
+          {activeInfluencer ? (
             <DraftCard
-              key={activeInfluencer.influencer_id}
+              key={activeInfluencer.ci_id || activeInfluencer.influencer_id}
               influencer={activeInfluencer}
               onApprove={handleApproveDraft}
               onRevise={handleReviseDraft}
               onReject={handleRejectDraft}
             />
+          ) : (
+            <div
+              className="card card-pad"
+              style={{
+                background: 'var(--white)',
+                border: '1px solid var(--dark)',
+                borderRadius: 'var(--r-lg)',
+                boxShadow: 'var(--shadow)',
+                padding: '40px',
+              }}
+            >
+              <p className="muted" style={{ textAlign: 'center', fontSize: '14px' }}>
+                참여 중인 인플루언서가 없습니다.
+              </p>
+            </div>
           )}
         </div>
       </div>

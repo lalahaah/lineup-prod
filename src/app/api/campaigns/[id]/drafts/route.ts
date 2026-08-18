@@ -1,7 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { CHANNEL_LABELS } from '@/lib/utils'
 import type { DraftItem } from '@/app/api/drafts/[id]/route'
 
 export interface InfluencerDraftOverview {
+  ci_id: string
   influencer_id: string
   name: string
   handle: string
@@ -9,314 +12,162 @@ export interface InfluencerDraftOverview {
   avatar_color_class: string
   channel_info: string
   status_label: string
-  status_variant: 'soft' | 'gray' | 'warn' | 'danger'
+  status_variant: 'soft' | 'gray' | 'warn' | 'danger' | 'green'
+  influencer: {
+    name: string
+    handle: string
+    channel: string
+    email: string | null
+  }
   drafts: DraftItem[]
   current_draft?: DraftItem | null
+  latest_draft?: DraftItem | null
 }
 
-const MOCK_CAMPAIGN_DRAFTS: InfluencerDraftOverview[] = [
-  {
-    influencer_id: 'inf-2',
-    name: '먹방준',
-    handle: '@mukbang_jun',
-    avatar_initial: '준',
-    avatar_color_class: 'c3',
-    channel_info: '유튜브 · 52만 팔로워',
-    status_label: '검수 중',
-    status_variant: 'warn',
-    drafts: [
-      {
-        id: 'draft-jun-v1',
-        campaign_id: 'camp-8',
-        influencer_id: 'inf-2',
-        version: 1,
-        status: 'rejected',
-        caption: '쿠쿠 트윈프레셔 신제품 런칭 리뷰입니다! #신혼집밥 #쿠쿠트윈프레셔',
-        file_name: 'mukbang_jun_v1.mp4',
-        file_size: '120MB',
-        file_duration: '03:50',
-        media_type: 'video',
-        created_at: '어제 10:00',
-        feedbacks: [
-          {
-            id: 'fb-1',
-            author_type: 'agency',
-            author_name: '김현우',
-            author_role: '운영',
-            avatar_initial: '우',
-            avatar_color_class: 'c1',
-            content: 'v1 영상에서 제품 모델명이 화면에 노출되지 않았어요. 클로즈업 컷 한 번만 추가 부탁드립니다.',
-            created_at: '어제 14:20',
-            action_label: '수정 요청',
-          },
-        ],
-      },
-      {
-        id: 'draft-jun-v2',
-        campaign_id: 'camp-8',
-        influencer_id: 'inf-2',
-        version: 2,
-        status: 'agency_reviewing',
-        caption:
-          '신혼 첫 밥솥으로 쿠쿠 트윈프레셔를 골랐어요 🍚 12분 만에 갓 지은 윤기나는 밥이 완성되는데, 압력이 두 배라 현미도 부드럽게 익어요. 자취·신혼 집들이 메뉴로 강력 추천! #신혼집밥 #쿠쿠트윈프레셔',
-        file_name: 'mukbang_jun_v2.mp4',
-        file_size: '142MB',
-        file_duration: '04:12',
-        media_type: 'video',
-        created_at: '오늘 09:35',
-        feedbacks: [
-          {
-            id: 'fb-1',
-            author_type: 'agency',
-            author_name: '김현우',
-            author_role: '운영',
-            avatar_initial: '우',
-            avatar_color_class: 'c1',
-            content: 'v1 영상에서 제품 모델명이 화면에 노출되지 않았어요. 클로즈업 컷 한 번만 추가 부탁드립니다.',
-            created_at: '어제 14:20',
-            action_label: '수정 요청',
-          },
-          {
-            id: 'fb-2',
-            author_type: 'influencer',
-            author_name: '먹방준',
-            author_role: '인플루언서',
-            avatar_initial: '준',
-            avatar_color_class: 'c3',
-            content: '모델명 클로즈업 추가해서 v2로 재제출했습니다! 확인 부탁드려요.',
-            created_at: '오늘 09:35',
-            action_label: '재제출',
-          },
-        ],
-      },
-    ],
-    current_draft: {
-      id: 'draft-jun-v2',
-      campaign_id: 'camp-8',
-      influencer_id: 'inf-2',
-      version: 2,
-      status: 'agency_reviewing',
-      caption:
-        '신혼 첫 밥솥으로 쿠쿠 트윈프레셔를 골랐어요 🍚 12분 만에 갓 지은 윤기나는 밥이 완성되는데, 압력이 두 배라 현미도 부드럽게 익어요. 자취·신혼 집들이 메뉴로 강력 추천! #신혼집밥 #쿠쿠트윈프레셔',
-      file_name: 'mukbang_jun_v2.mp4',
-      file_size: '142MB',
-      file_duration: '04:12',
-      media_type: 'video',
-      created_at: '오늘 09:35',
-      feedbacks: [
-        {
-          id: 'fb-1',
-          author_type: 'agency',
-          author_name: '김현우',
-          author_role: '운영',
-          avatar_initial: '우',
-          avatar_color_class: 'c1',
-          content: 'v1 영상에서 제품 모델명이 화면에 노출되지 않았어요. 클로즈업 컷 한 번만 추가 부탁드립니다.',
-          created_at: '어제 14:20',
-          action_label: '수정 요청',
-        },
-        {
-          id: 'fb-2',
-          author_type: 'influencer',
-          author_name: '먹방준',
-          author_role: '인플루언서',
-          avatar_initial: '준',
-          avatar_color_class: 'c3',
-          content: '모델명 클로즈업 추가해서 v2로 재제출했습니다! 확인 부탁드려요.',
-          created_at: '오늘 09:35',
-          action_label: '재제출',
-        },
-      ],
-    },
-  },
-  {
-    influencer_id: 'inf-1',
-    name: '유리쿡',
-    handle: '@yuri_cooks',
-    avatar_initial: '유',
-    avatar_color_class: 'c1',
-    channel_info: '인스타 · 12.5만 팔로워',
-    status_label: '승인',
-    status_variant: 'soft',
-    drafts: [
-      {
-        id: 'draft-yuri-v1',
-        campaign_id: 'camp-8',
-        influencer_id: 'inf-1',
-        version: 1,
-        status: 'client_approved',
-        caption: '쿠쿠 트윈프레셔로 만드는 초스피드 레시피! ✨ 밥이 윤기나고 쫀득해요. #신혼집밥 #쿠쿠트윈프레셔',
-        file_name: 'yuri_cooks_v1.mp4',
-        file_size: '45MB',
-        file_duration: '01:30',
-        media_type: 'video',
-        created_at: '어제 12:10',
-        feedbacks: [
-          {
-            id: 'fb-3',
-            author_type: 'agency',
-            author_name: '김현우',
-            author_role: '운영',
-            avatar_initial: '우',
-            avatar_color_class: 'c1',
-            content: '광고주 승인이 완료되었습니다. 예정일에 맞춰 포스팅 부탁드립니다.',
-            created_at: '어제 18:00',
-            action_label: '승인 완료',
-          },
-        ],
-      },
-    ],
-    current_draft: {
-      id: 'draft-yuri-v1',
-      campaign_id: 'camp-8',
-      influencer_id: 'inf-1',
-      version: 1,
-      status: 'client_approved',
-      caption: '쿠쿠 트윈프레셔로 만드는 초스피드 레시피! ✨ 밥이 윤기나고 쫀득해요. #신혼집밥 #쿠쿠트윈프레셔',
-      file_name: 'yuri_cooks_v1.mp4',
-      file_size: '45MB',
-      file_duration: '01:30',
-      media_type: 'video',
-      created_at: '어제 12:10',
-      feedbacks: [
-        {
-          id: 'fb-3',
-          author_type: 'agency',
-          author_name: '김현우',
-          author_role: '운영',
-          avatar_initial: '우',
-          avatar_color_class: 'c1',
-          content: '광고주 승인이 완료되었습니다. 예정일에 맞춰 포스팅 부탁드립니다.',
-          created_at: '어제 18:00',
-          action_label: '승인 완료',
-        },
-      ],
-    },
-  },
-  {
-    influencer_id: 'inf-6',
-    name: '집밥현이',
-    handle: '@hyuni.eats',
-    avatar_initial: '현',
-    avatar_color_class: 'c6',
-    channel_info: '유튜브 · 17만 팔로워',
-    status_label: '승인',
-    status_variant: 'soft',
-    drafts: [
-      {
-        id: 'draft-hyuni-v1',
-        campaign_id: 'camp-8',
-        influencer_id: 'inf-6',
-        version: 1,
-        status: 'client_approved',
-        caption: '오늘 저녁은 쿠쿠 트윈프레셔와 함께하는 집밥 한 상 🍚 #신혼집밥 #쿠쿠트윈프레셔',
-        file_name: 'hyuni_v1.mp4',
-        file_size: '280MB',
-        file_duration: '08:45',
-        media_type: 'video',
-        created_at: '어제 16:20',
-        feedbacks: [],
-      },
-    ],
-    current_draft: {
-      id: 'draft-hyuni-v1',
-      campaign_id: 'camp-8',
-      influencer_id: 'inf-6',
-      version: 1,
-      status: 'client_approved',
-      caption: '오늘 저녁은 쿠쿠 트윈프레셔와 함께하는 집밥 한 상 🍚 #신혼집밥 #쿠쿠트윈프레셔',
-      file_name: 'hyuni_v1.mp4',
-      file_size: '280MB',
-      file_duration: '08:45',
-      media_type: 'video',
-      created_at: '어제 16:20',
-      feedbacks: [],
-    },
-  },
-  {
-    influencer_id: 'inf-4',
-    name: '하나테이블',
-    handle: '@hana_table',
-    avatar_initial: '하',
-    avatar_color_class: 'c4',
-    channel_info: '인스타 · 21만 팔로워',
-    status_label: '수정요청',
-    status_variant: 'danger',
-    drafts: [
-      {
-        id: 'draft-hana-v1',
-        campaign_id: 'camp-8',
-        influencer_id: 'inf-4',
-        version: 1,
-        status: 'revision_requested',
-        caption: '예쁜 테이블 세팅과 쿠쿠 트윈프레셔 🤍 #신혼집밥 #쿠쿠트윈프레셔',
-        file_name: 'hana_v1.mp4',
-        file_size: '32MB',
-        file_duration: '00:58',
-        media_type: 'video',
-        created_at: '오늘 08:00',
-        feedbacks: [
-          {
-            id: 'fb-4',
-            author_type: 'agency',
-            author_name: '김현우',
-            author_role: '운영',
-            avatar_initial: '우',
-            avatar_color_class: 'c1',
-            content: '해시태그 오탈자 수정 부탁드립니다 (#쿠쿠트윈프레셔).',
-            created_at: '오늘 10:12',
-            action_label: '수정 요청',
-          },
-        ],
-      },
-    ],
-    current_draft: {
-      id: 'draft-hana-v1',
-      campaign_id: 'camp-8',
-      influencer_id: 'inf-4',
-      version: 1,
-      status: 'revision_requested',
-      caption: '예쁜 테이블 세팅과 쿠쿠 트윈프레셔 🤍 #신혼집밥 #쿠쿠트윈프레셔',
-      file_name: 'hana_v1.mp4',
-      file_size: '32MB',
-      file_duration: '00:58',
-      media_type: 'video',
-      created_at: '오늘 08:00',
-      feedbacks: [
-        {
-          id: 'fb-4',
-          author_type: 'agency',
-          author_name: '김현우',
-          author_role: '운영',
-          avatar_initial: '우',
-          avatar_color_class: 'c1',
-          content: '해시태그 오탈자 수정 부탁드립니다 (#쿠쿠트윈프레셔).',
-          created_at: '오늘 10:12',
-          action_label: '수정 요청',
-        },
-      ],
-    },
-  },
-  {
-    influencer_id: 'inf-5',
-    name: '리빙민지',
-    handle: '@minji.living',
-    avatar_initial: '민',
-    avatar_color_class: 'c5',
-    channel_info: '틱톡 · 34만 팔로워',
-    status_label: '대기',
-    status_variant: 'gray',
-    drafts: [],
-    current_draft: null,
-  },
-]
+function getDraftStatusInfo(status?: string): {
+  label: string
+  variant: 'soft' | 'gray' | 'warn' | 'danger' | 'green'
+} {
+  switch (status) {
+    case 'submitted':
+      return { label: '검수 대기', variant: 'warn' }
+    case 'agency_reviewing':
+      return { label: '검수 중', variant: 'warn' }
+    case 'agency_approved':
+      return { label: '승인', variant: 'green' }
+    case 'revision_requested':
+      return { label: '수정 요청', variant: 'danger' }
+    case 'rejected':
+      return { label: '반려', variant: 'gray' }
+    case 'client_reviewing':
+      return { label: '광고주 검토', variant: 'soft' }
+    case 'client_approved':
+      return { label: '승인 완료', variant: 'green' }
+    default:
+      return { label: '미제출', variant: 'gray' }
+  }
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id: campaignId } = await context.params
 
-  return NextResponse.json({
-    data: MOCK_CAMPAIGN_DRAFTS,
-  })
+  try {
+    const supabase = createServiceClient()
+
+    const { data: ciList, error } = await supabase
+      .from('campaign_influencers')
+      .select(`
+        id,
+        status,
+        influencers (
+          id,
+          name,
+          handle,
+          primary_channel,
+          email
+        ),
+        drafts (
+          id,
+          version,
+          file_urls,
+          caption,
+          hashtags,
+          status,
+          submitted_at,
+          planned_upload_at,
+          created_at,
+          draft_feedbacks (
+            id,
+            author_type,
+            author_name,
+            content,
+            created_at
+          )
+        )
+      `)
+      .eq('campaign_id', campaignId)
+      .eq('status', 'confirmed')
+      .order('submitted_at', { ascending: false, foreignTable: 'drafts' })
+
+    if (error) {
+      console.error('Error fetching campaign drafts:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const formattedList: InfluencerDraftOverview[] = (ciList || []).map((ci: any, idx: number) => {
+      const inf = ci.influencers || {}
+      const draftsRaw = Array.isArray(ci.drafts) ? ci.drafts : []
+      // Sort drafts by version ascending for history, latest first for latest_draft
+      const sortedDrafts = [...draftsRaw].sort((a, b) => (b.version || 0) - (a.version || 0))
+      const latestRaw = sortedDrafts[0] || null
+
+      const drafts: DraftItem[] = sortedDrafts.map((d: any) => {
+        const feedbacks = (d.draft_feedbacks || []).map((fb: any) => ({
+          id: fb.id,
+          author_type: (['agency', 'client', 'influencer'].includes(fb.author_type)
+            ? fb.author_type
+            : 'agency') as 'agency' | 'client' | 'influencer',
+          author_name: fb.author_name || (fb.author_type === 'agency' ? '에이전시' : '광고주'),
+          author_role: fb.author_type === 'agency' ? '에이전시' : fb.author_type === 'client' ? '광고주' : '인플루언서',
+          avatar_initial: (fb.author_name || '운')[0],
+          avatar_color_class: 'c1',
+          content: fb.content,
+          created_at: fb.created_at ? new Date(fb.created_at).toLocaleDateString('ko-KR') : '방금 전',
+          action_label: fb.author_type === 'agency' ? '에이전시 피드백' : '광고주 피드백',
+        }))
+
+        const fileName = Array.isArray(d.file_urls) && d.file_urls.length > 0
+          ? d.file_urls[0].split('/').pop() || `원고_v${d.version}`
+          : `원고_v${d.version}`
+
+        return {
+          id: d.id,
+          campaign_id: campaignId,
+          influencer_id: inf.id || '',
+          version: d.version,
+          status: d.status,
+          caption: d.caption || '',
+          file_urls: d.file_urls || [],
+          file_name: fileName,
+          created_at: d.submitted_at ? new Date(d.submitted_at).toLocaleDateString('ko-KR') : '오늘',
+          feedbacks,
+        }
+      })
+
+      const latestDraft = drafts[0] || null
+      const statusInfo = getDraftStatusInfo(latestDraft?.status)
+      const channelLabel = CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램'
+
+      return {
+        ci_id: ci.id,
+        influencer_id: inf.id || ci.id,
+        name: inf.name || '인플루언서',
+        handle: inf.handle || '',
+        avatar_initial: (inf.name || '인')[0],
+        avatar_color_class: `c${(idx % 6) + 1}`,
+        channel_info: `${channelLabel}`,
+        status_label: statusInfo.label,
+        status_variant: statusInfo.variant,
+        influencer: {
+          name: inf.name || '인플루언서',
+          handle: inf.handle || '',
+          channel: inf.primary_channel || 'instagram',
+          email: inf.email || null,
+        },
+        drafts: drafts.sort((a, b) => a.version - b.version),
+        current_draft: latestDraft,
+        latest_draft: latestDraft,
+      }
+    })
+
+    return NextResponse.json({
+      data: formattedList,
+    })
+  } catch (error: any) {
+    console.error('Error fetching campaign drafts:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+  }
 }

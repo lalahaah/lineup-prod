@@ -1,109 +1,140 @@
 import React from 'react'
+import {
+  Html, Head, Body, Container, Section, Text, Button, Hr, Preview
+} from '@react-email/components'
 
-export interface InfluencerRevisionProps {
+interface Props {
   influencerName: string
   campaignName: string
+  brandName: string
   feedback: string
   resubmitLink: string
 }
 
 export function InfluencerRevision({
-  influencerName = '먹방준',
-  campaignName = '쿠쿠 트윈프레셔 신제품 런칭',
-  feedback = 'v1 영상에서 제품 모델명이 화면에 노출되지 않았어요. 클로즈업 컷 한 번만 추가 부탁드립니다.',
-  resubmitLink = 'https://lineup.kr/inf/mock-inf-token-001',
-}: InfluencerRevisionProps) {
+  influencerName = '인플루언서',
+  campaignName = '캠페인',
+  brandName = '광고주',
+  feedback = '수정 요청 사항을 확인해 주세요.',
+  resubmitLink = 'http://localhost:3000/inf',
+}: Props) {
   return (
-    <div
-      style={{
+    <Html>
+      <Head />
+      <Preview>[{brandName}] 원고 수정 요청 안내입니다</Preview>
+      <Body style={{
         backgroundColor: '#F3F3F3',
-        padding: '30px 10px',
-        fontFamily: "'Space Grotesk', -apple-system, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '600px',
-          margin: '0 auto',
-          backgroundColor: '#FFFFFF',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <Container style={{
+          maxWidth: '560px',
+          margin: '40px auto',
+          backgroundColor: '#ffffff',
           borderRadius: '16px',
           border: '1px solid #191A23',
           overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
+        }}>
+          {/* 헤더 */}
+          <Section style={{
             backgroundColor: '#191A23',
-            padding: '20px 24px',
-            color: '#FFFFFF',
-            fontSize: '20px',
-            fontWeight: 700,
-          }}
-        >
-          Lineup <span style={{ color: '#B9FF66', fontSize: '14px' }}>· 원고 수정 요청</span>
-        </div>
+            padding: '24px 32px',
+          }}>
+            <Text style={{
+              color: '#B9FF66',
+              fontSize: '22px',
+              fontWeight: '700',
+              margin: 0,
+            }}>
+              Lineup
+            </Text>
+            <Text style={{
+              color: '#9A9BA5',
+              fontSize: '13px',
+              margin: '4px 0 0',
+            }}>
+              by 라운드미디어
+            </Text>
+          </Section>
 
-        <div style={{ padding: '24px 28px', color: '#191A23' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 600, marginTop: 0 }}>
-            안녕하세요, {influencerName} 님
-          </h2>
-          <p style={{ fontSize: '15px', color: '#4A4A52' }}>
-            <b>{campaignName}</b> 캠페인에 제출해주신 원고에 대한 검수 피드백이 도착했습니다.
-          </p>
+          {/* 본문 */}
+          <Section style={{ padding: '32px' }}>
+            <Text style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: '#191A23',
+              margin: '0 0 8px',
+            }}>
+              {influencerName} 님, 원고 수정 요청드립니다
+            </Text>
+            <Text style={{
+              fontSize: '15px',
+              color: '#4E5968',
+              lineHeight: '1.7',
+              margin: '0 0 24px',
+            }}>
+              제출해주신 <strong>{campaignName}</strong>({brandName}) 원고에 대해 아래 피드백 내용을 참고하여 수정 후 재제출해 주세요.
+            </Text>
 
-          <div
-            style={{
-              backgroundColor: '#FFFBE6',
-              border: '1px solid #FFE58F',
+            {/* 피드백 박스 */}
+            <Section style={{
+              backgroundColor: '#F3F3F3',
               borderRadius: '12px',
-              padding: '18px',
-              margin: '20px 0',
-            }}
-          >
-            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '8px', color: '#D48806' }}>
-              📝 운영팀 피드백 내용
-            </div>
-            <div style={{ fontSize: '14px', lineHeight: 1.6, color: '#191A23' }}>
-              {feedback}
-            </div>
-          </div>
+              border: '1px solid #E5E8EB',
+              padding: '20px 24px',
+              margin: '0 0 24px',
+            }}>
+              <Text style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#191A23',
+                margin: '0 0 8px',
+              }}>
+                💬 수정 요청 피드백
+              </Text>
+              <Text style={{
+                fontSize: '14px',
+                color: '#333D4B',
+                lineHeight: '1.6',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {feedback}
+              </Text>
+            </Section>
 
-          <p style={{ fontSize: '14px', color: '#4A4A52' }}>
-            수정 완료 후 아래 링크를 통해 원고를 재제출해주시기 바랍니다.
-          </p>
-
-          <div style={{ textAlign: 'center', margin: '28px 0' }}>
-            <a
+            {/* CTA 버튼 */}
+            <Button
               href={resubmitLink}
               style={{
-                display: 'inline-block',
                 backgroundColor: '#191A23',
-                color: '#FFFFFF',
-                padding: '14px 28px',
-                borderRadius: '12px',
+                color: '#ffffff',
                 fontSize: '15px',
-                fontWeight: 600,
+                fontWeight: '600',
+                padding: '14px 28px',
+                borderRadius: '10px',
+                display: 'block',
+                textAlign: 'center',
                 textDecoration: 'none',
+                margin: '0 0 24px',
               }}
             >
               원고 재제출하기 →
-            </a>
-          </div>
-        </div>
+            </Button>
 
-        <div
-          style={{
-            backgroundColor: '#FAFAFA',
-            borderTop: '1px solid #E5E5E5',
-            padding: '16px 24px',
-            fontSize: '12px',
-            color: '#8A8A93',
-            textAlign: 'center',
-          }}
-        >
-          (주)라운드미디어 · Lineup 운영팀
-        </div>
-      </div>
-    </div>
+            <Hr style={{ borderColor: '#E5E8EB', margin: '24px 0' }} />
+
+            <Text style={{
+              fontSize: '13px',
+              color: '#8B95A1',
+              lineHeight: '1.6',
+              margin: 0,
+            }}>
+              본 메일은 라운드미디어를 통해 발송됐습니다.<br />
+              문의사항은 담당자에게 연락해 주세요.
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
   )
 }

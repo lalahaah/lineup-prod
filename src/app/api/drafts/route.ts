@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export interface QueueDraftItem {
   id: string
@@ -12,224 +13,130 @@ export interface QueueDraftItem {
   client_name: string
   version: string
   submitted_at: string
-  status: 'agency_reviewing' | 'revision_requested' | 'client_reviewing' | 'client_approved'
-  status_label: '검수 중' | '수정 요청' | '광고주 컨펌 대기' | '승인 완료'
-  status_variant: 'warn' | 'danger' | 'soft' | 'green'
+  status: 'submitted' | 'agency_reviewing' | 'revision_requested' | 'client_reviewing' | 'client_approved' | 'agency_approved' | 'rejected' | string
+  status_label: '검수 대기' | '검수 중' | '수정 요청' | '광고주 컨펌 대기' | '승인 완료' | '승인' | '반려' | string
+  status_variant: 'warn' | 'danger' | 'soft' | 'green' | 'gray'
 }
 
-const MOCK_QUEUE_DRAFTS: QueueDraftItem[] = [
-  {
-    id: 'qd-1',
-    influencer_id: 'inf-2',
-    influencer_name: '먹방준',
-    handle: '@mukbang_jun',
-    avatar_initial: '준',
-    avatar_color_class: 'c3',
-    campaign_id: 'camp-8',
-    campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
-    client_name: 'CUCKOO',
-    version: 'v2',
-    submitted_at: '오늘 09:35',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-2',
-    influencer_id: 'inf-1',
-    influencer_name: '유리쿡',
-    handle: '@yuri_cooks',
-    avatar_initial: '유',
-    avatar_color_class: 'c1',
-    campaign_id: 'camp-8',
-    campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
-    client_name: 'CUCKOO',
-    version: 'v1',
-    submitted_at: '어제 15:20',
-    status: 'client_reviewing',
-    status_label: '광고주 컨펌 대기',
-    status_variant: 'soft',
-  },
-  {
-    id: 'qd-3',
-    influencer_id: 'inf-6',
-    influencer_name: '집밥현이',
-    handle: '@hyuni.eats',
-    avatar_initial: '현',
-    avatar_color_class: 'c6',
-    campaign_id: 'camp-8',
-    campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
-    client_name: 'CUCKOO',
-    version: 'v1',
-    submitted_at: '어제 11:00',
-    status: 'client_reviewing',
-    status_label: '광고주 컨펌 대기',
-    status_variant: 'soft',
-  },
-  {
-    id: 'qd-4',
-    influencer_id: 'inf-4',
-    influencer_name: '하나테이블',
-    handle: '@hana_table',
-    avatar_initial: '하',
-    avatar_color_class: 'c4',
-    campaign_id: 'camp-8',
-    campaign_name: '쿠쿠 트윈프레셔 신제품 런칭',
-    client_name: 'CUCKOO',
-    version: 'v1',
-    submitted_at: '2일전',
-    status: 'revision_requested',
-    status_label: '수정 요청',
-    status_variant: 'danger',
-  },
-  {
-    id: 'qd-5',
-    influencer_id: 'inf-3',
-    influencer_name: '소연홈',
-    handle: '@soyeon.home',
-    avatar_initial: '소',
-    avatar_color_class: 'c2',
-    campaign_id: 'camp-3',
-    campaign_name: '하기스 위생 신제품',
-    client_name: '유한킴벌리',
-    version: 'v1',
-    submitted_at: '오늘 08:10',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-6',
-    influencer_id: 'inf-5',
-    influencer_name: '리빙민지',
-    handle: '@minji.living',
-    avatar_initial: '민',
-    avatar_color_class: 'c5',
-    campaign_id: 'camp-3',
-    campaign_name: '하기스 위생 신제품',
-    client_name: '유한킴벌리',
-    version: 'v2',
-    submitted_at: '어제 14:00',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-7',
-    influencer_id: 'inf-1',
-    influencer_name: '유리쿡',
-    handle: '@yuri_cooks',
-    avatar_initial: '유',
-    avatar_color_class: 'c1',
-    campaign_id: 'camp-1',
-    campaign_name: '쿠쿠 에어프라이어 봄 캠페인',
-    client_name: 'CUCKOO',
-    version: 'v1',
-    submitted_at: '오늘 10:00',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-8',
-    influencer_id: 'inf-2',
-    influencer_name: '먹방준',
-    handle: '@mukbang_jun',
-    avatar_initial: '준',
-    avatar_color_class: 'c3',
-    campaign_id: 'camp-2',
-    campaign_name: '올리브영 뷰티 페스타',
-    client_name: 'CJ올리브영',
-    version: 'v1',
-    submitted_at: '3일전',
-    status: 'revision_requested',
-    status_label: '수정 요청',
-    status_variant: 'danger',
-  },
-  {
-    id: 'qd-9',
-    influencer_id: 'inf-6',
-    influencer_name: '집밥현이',
-    handle: '@hyuni.eats',
-    avatar_initial: '현',
-    avatar_color_class: 'c6',
-    campaign_id: 'camp-2',
-    campaign_name: '올리브영 뷰티 페스타',
-    client_name: 'CJ올리브영',
-    version: 'v2',
-    submitted_at: '어제',
-    status: 'client_reviewing',
-    status_label: '광고주 컨펌 대기',
-    status_variant: 'soft',
-  },
-  {
-    id: 'qd-10',
-    influencer_id: 'inf-4',
-    influencer_name: '하나테이블',
-    handle: '@hana_table',
-    avatar_initial: '하',
-    avatar_color_class: 'c4',
-    campaign_id: 'camp-4',
-    campaign_name: '크리넥스 협찬 캠페인',
-    client_name: '유한킴벌리',
-    version: 'v1',
-    submitted_at: '오늘',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-11',
-    influencer_id: 'inf-3',
-    influencer_name: '소연홈',
-    handle: '@soyeon.home',
-    avatar_initial: '소',
-    avatar_color_class: 'c2',
-    campaign_id: 'camp-4',
-    campaign_name: '크리넥스 협찬 캠페인',
-    client_name: '유한킴벌리',
-    version: 'v1',
-    submitted_at: '오늘',
-    status: 'agency_reviewing',
-    status_label: '검수 중',
-    status_variant: 'warn',
-  },
-  {
-    id: 'qd-12',
-    influencer_id: 'inf-5',
-    influencer_name: '리빙민지',
-    handle: '@minji.living',
-    avatar_initial: '민',
-    avatar_color_class: 'c5',
-    campaign_id: 'camp-5',
-    campaign_name: '쿠쿠 정수기 상반기 프로모션',
-    client_name: 'CUCKOO',
-    version: 'v1',
-    submitted_at: '2일전',
-    status: 'revision_requested',
-    status_label: '수정 요청',
-    status_variant: 'danger',
-  },
-]
+function getStatusInfo(status: string): {
+  label: QueueDraftItem['status_label']
+  variant: QueueDraftItem['status_variant']
+} {
+  switch (status) {
+    case 'submitted':
+      return { label: '검수 대기', variant: 'warn' }
+    case 'agency_reviewing':
+      return { label: '검수 중', variant: 'warn' }
+    case 'revision_requested':
+      return { label: '수정 요청', variant: 'danger' }
+    case 'agency_approved':
+      return { label: '승인', variant: 'green' }
+    case 'client_reviewing':
+      return { label: '광고주 컨펌 대기', variant: 'soft' }
+    case 'client_approved':
+      return { label: '승인 완료', variant: 'green' }
+    case 'rejected':
+      return { label: '반려', variant: 'gray' }
+    default:
+      return { label: '검수 대기', variant: 'warn' }
+  }
+}
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const filter = searchParams.get('filter') // 'all' | 'agency_reviewing' | 'revision_requested' | 'client_reviewing'
+  try {
+    const supabase = createServiceClient()
+    const searchParams = request.nextUrl.searchParams
+    const filter = searchParams.get('filter')
 
-  let filtered = MOCK_QUEUE_DRAFTS
-  if (filter && filter !== 'all') {
-    filtered = MOCK_QUEUE_DRAFTS.filter((d) => d.status === filter)
+    const { data: rawDrafts, error } = await supabase
+      .from('drafts')
+      .select(`
+        id,
+        version,
+        status,
+        submitted_at,
+        created_at,
+        campaign_influencers (
+          id,
+          campaign_id,
+          influencer_id,
+          influencers (
+            id,
+            name,
+            handle,
+            primary_channel
+          ),
+          campaigns (
+            id,
+            name,
+            clients ( name )
+          )
+        )
+      `)
+      .order('submitted_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching all drafts queue:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const items: QueueDraftItem[] = (rawDrafts || []).map((d: any, idx: number) => {
+      const ci = d.campaign_influencers || {}
+      const inf = ci.influencers || {}
+      const camp = ci.campaigns || {}
+      const client = camp.clients || {}
+
+      const infName = inf.name || '인플루언서'
+      const statusInfo = getStatusInfo(d.status)
+
+      const submittedDate = d.submitted_at || d.created_at
+      const dateStr = submittedDate
+        ? new Date(submittedDate).toLocaleDateString('ko-KR', {
+            month: '2-digit',
+            day: '2-digit',
+          })
+        : '-'
+
+      return {
+        id: d.id,
+        influencer_id: inf.id || ci.influencer_id || '',
+        influencer_name: infName,
+        handle: inf.handle || '',
+        avatar_initial: infName[0],
+        avatar_color_class: `c${(idx % 6) + 1}`,
+        campaign_id: camp.id || ci.campaign_id || '',
+        campaign_name: camp.name || '캠페인',
+        client_name: client.name || '광고주',
+        version: `v${d.version}`,
+        submitted_at: dateStr,
+        status: d.status,
+        status_label: statusInfo.label,
+        status_variant: statusInfo.variant,
+      }
+    })
+
+    let filtered = items
+    if (filter && filter !== 'all') {
+      if (filter === 'agency_reviewing') {
+        filtered = items.filter((d) => d.status === 'agency_reviewing' || d.status === 'submitted')
+      } else {
+        filtered = items.filter((d) => d.status === filter)
+      }
+    }
+
+    const counts = {
+      total: items.length,
+      agency_reviewing: items.filter((d) => d.status === 'agency_reviewing' || d.status === 'submitted').length,
+      revision_requested: items.filter((d) => d.status === 'revision_requested').length,
+      client_reviewing: items.filter((d) => d.status === 'client_reviewing' || d.status === 'agency_approved').length,
+    }
+
+    return NextResponse.json({
+      data: filtered,
+      counts,
+    })
+  } catch (error: any) {
+    console.error('Error in drafts queue API:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
-
-  const counts = {
-    total: MOCK_QUEUE_DRAFTS.length,
-    agency_reviewing: MOCK_QUEUE_DRAFTS.filter((d) => d.status === 'agency_reviewing').length,
-    revision_requested: MOCK_QUEUE_DRAFTS.filter((d) => d.status === 'revision_requested').length,
-    client_reviewing: MOCK_QUEUE_DRAFTS.filter((d) => d.status === 'client_reviewing').length,
-  }
-
-  return NextResponse.json({
-    data: filtered,
-    counts,
-  })
 }

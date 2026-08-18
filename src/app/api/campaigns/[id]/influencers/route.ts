@@ -1,84 +1,114 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { CHANNEL_LABELS } from '@/lib/utils'
 
-export interface CampaignInfluencerDetail {
+export interface CampaignInfluencerItem {
   id: string
-  influencer_id: string
-  name: string
-  handle?: string
-  avatar_initial?: string
-  avatar_color_class?: string
-  channel?: string
-  channel_label?: string
-  followers?: string
-  engagement?: string
-  status?: string
-  status_label?: string
-  badge_variant?: 'gray' | 'soft' | 'warn' | 'danger' | 'dark'
-  fee?: number
-  fee_formatted?: string
+  status: string
+  proposed_fee: number | null
+  final_fee: number | null
   agency_comment?: string | null
-  rejection_reason?: string | null
+  access_token?: string
+  shipping_address?: any
   shipping_status?: string | null
   tracking_number?: string | null
-  status_text?: string
-  badge_label?: string
-  channel_info?: string
-  caption?: string
-  media_info?: any
-  draft_versions: any[]
-  feedback_history: any[]
+  influencer: {
+    id: string
+    name: string
+    handle?: string | null
+    primary_channel?: string | null
+    channel_urls?: any
+    channel_handles?: any
+    followers?: any
+    fee_min?: number | null
+    fee_max?: number | null
+    categories?: string[]
+    email?: string | null
+    phone?: string | null
+    response_rate?: number | null
+    collab_count?: number | null
+    is_blacklisted?: boolean
+  }
 }
+
+export type CampaignInfluencerDetail = CampaignInfluencerItem
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params
+    const { id: campaignId } = await context.params
     const supabase = createServiceClient()
 
-    const { data: campaignInfluencers, error } = await supabase
+    const { data, error } = await supabase
       .from('campaign_influencers')
-      .select('*, influencers(*)')
-      .eq('campaign_id', id)
-      .order('created_at', { ascending: false })
+      .select(`
+        id,
+        status,
+        proposed_fee,
+        final_fee,
+        agency_comment,
+        access_token,
+        shipping_address,
+        shipping_status,
+        tracking_number,
+        influencers (
+          id,
+          name,
+          handle,
+          primary_channel,
+          channel_urls,
+          channel_handles,
+          followers,
+          fee_min,
+          fee_max,
+          categories,
+          email,
+          phone,
+          response_rate,
+          collab_count,
+          is_blacklisted
+        )
+      `)
+      .eq('campaign_id', campaignId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const formatted: CampaignInfluencerDetail[] = (campaignInfluencers || []).map((ci: any) => {
-      const inf = ci.influencers || {}
-      const name = inf.name || '알 수 없음'
+    const formatted: CampaignInfluencerItem[] = (data || []).map((ci: any) => {
+      const inf = Array.isArray(ci.influencers) ? ci.influencers[0] : (ci.influencers || {})
       return {
         id: ci.id,
-        influencer_id: ci.influencer_id,
-        name,
-        handle: inf.handle || '',
-        avatar_initial: name[0],
-        avatar_color_class: 'c1',
-        channel: inf.primary_channel || 'instagram',
-        channel_label: CHANNEL_LABELS[inf.primary_channel] || inf.primary_channel || '인스타그램',
-        followers: typeof inf.followers === 'object' && inf.followers !== null ? (inf.followers.instagram || inf.followers.youtube || '10만') : '10만',
-        engagement: typeof inf.avg_engagement === 'object' && inf.avg_engagement !== null ? `${inf.avg_engagement.instagram || 5.0}%` : '5.0%',
         status: ci.status,
-        status_label: ci.status,
-        badge_variant: 'soft' as const,
-        fee: ci.proposed_fee || inf.fee_min || 0,
-        fee_formatted: `₩${((ci.proposed_fee || inf.fee_min || 0) / 10000).toFixed(0)}만`,
+        proposed_fee: ci.proposed_fee,
+        final_fee: ci.final_fee,
         agency_comment: ci.agency_comment,
-        rejection_reason: ci.rejection_reason,
+        access_token: ci.access_token,
+        shipping_address: ci.shipping_address,
         shipping_status: ci.shipping_status,
         tracking_number: ci.tracking_number,
-        draft_versions: [],
-        feedback_history: [],
-        raw_ci: ci
+        influencer: {
+          id: inf.id || '',
+          name: inf.name || '알 수 없음',
+          handle: inf.handle || null,
+          primary_channel: inf.primary_channel || null,
+          channel_urls: inf.channel_urls || null,
+          channel_handles: inf.channel_handles || null,
+          followers: inf.followers || null,
+          fee_min: inf.fee_min || null,
+          fee_max: inf.fee_max || null,
+          categories: inf.categories || [],
+          email: inf.email || null,
+          phone: inf.phone || null,
+          response_rate: inf.response_rate || null,
+          collab_count: inf.collab_count || null,
+          is_blacklisted: inf.is_blacklisted || false,
+        },
       }
     })
 
-    return NextResponse.json({ data: campaignInfluencers, formatted })
+    return NextResponse.json({ data: formatted })
   } catch (error: any) {
     console.error('Error fetching campaign influencers:', error)
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
@@ -110,7 +140,7 @@ export async function POST(
         status: 'candidate',
         access_token: accessToken,
         proposed_fee: proposed_fee ? Number(proposed_fee) : null,
-        agency_comment: agency_comment || null
+        agency_comment: agency_comment || null,
       })
       .select('*, influencers(*)')
       .single()
@@ -125,7 +155,7 @@ export async function POST(
       actor_type: 'agency_manager',
       actor_name: '담당자',
       description: '캠페인에 신규 인플루언서가 추가되었습니다.',
-      metadata: { influencer_id }
+      metadata: { influencer_id },
     })
 
     return NextResponse.json({ data: newCI }, { status: 201 })

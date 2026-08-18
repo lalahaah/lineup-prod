@@ -7,11 +7,136 @@ import { toast } from 'sonner'
 import { CampaignStepper } from '@/components/campaign/CampaignStepper'
 import type { CampaignDetailData } from '@/app/api/campaigns/[id]/route'
 import type { CampaignInfluencerDetail } from '@/app/api/campaigns/[id]/influencers/route'
-import { STAGE_LABELS, STAGE_COLORS, type CampaignStage } from '@/types'
+import { STAGE_LABELS, STAGE_COLORS, CI_STATUS_LABELS, type CampaignStage, type CIStatus } from '@/types'
+import { CHANNEL_LABELS } from '@/lib/utils'
 
 interface CampaignDetailClientProps {
   campaign: CampaignDetailData
   influencers: CampaignInfluencerDetail[]
+}
+
+const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
+
+function getInfluencerInfo(ci: CampaignInfluencerDetail) {
+  const inf = ci.influencer || (ci as any)
+  return {
+    id: inf.id || (ci as any).influencer_id || '',
+    name: inf.name || (ci as any).name || '알 수 없음',
+    handle: inf.handle || (ci as any).handle || null,
+    primaryChannel: inf.primary_channel || (ci as any).channel || 'instagram',
+    followers: inf.followers || (ci as any).followers,
+    feeMin: inf.fee_min,
+    feeMax: inf.fee_max,
+  }
+}
+
+function formatFollowers(followers: any, primaryChannel?: string | null): string {
+  let count = 0
+  if (typeof followers === 'number') {
+    count = followers
+  } else if (typeof followers === 'string') {
+    const parsed = Number(followers)
+    if (!isNaN(parsed)) {
+      count = parsed
+    } else {
+      return followers
+    }
+  } else if (followers && typeof followers === 'object') {
+    const key = primaryChannel || 'instagram'
+    const val = followers[key] ?? followers['instagram'] ?? followers['youtube'] ?? followers['tiktok'] ?? 0
+    if (typeof val === 'number') {
+      count = val
+    } else if (typeof val === 'string') {
+      const parsed = Number(val)
+      if (!isNaN(parsed)) {
+        count = parsed
+      } else {
+        return val
+      }
+    }
+  }
+
+  if (!count || count === 0) return '0'
+  if (count >= 10000) {
+    const man = count / 10000
+    return Number.isInteger(man) ? `${man}만` : `${parseFloat(man.toFixed(1))}만`
+  }
+  return count.toLocaleString('ko-KR')
+}
+
+function formatFee(proposedFee?: number | null, feeMin?: number | null, feeMax?: number | null): string {
+  if (proposedFee !== undefined && proposedFee !== null && proposedFee > 0) {
+    if (proposedFee >= 10000) {
+      const man = proposedFee / 10000
+      return Number.isInteger(man) ? `₩${man}만` : `₩${parseFloat(man.toFixed(1))}만`
+    }
+    return `₩${proposedFee.toLocaleString()}`
+  }
+
+  const hasMin = feeMin !== undefined && feeMin !== null && feeMin > 0
+  const hasMax = feeMax !== undefined && feeMax !== null && feeMax > 0
+
+  if (hasMin && hasMax) {
+    const minStr = feeMin >= 10000 ? `${Number.isInteger(feeMin / 10000) ? feeMin / 10000 : parseFloat((feeMin / 10000).toFixed(1))}만` : `${feeMin.toLocaleString()}원`
+    const maxStr = feeMax >= 10000 ? `${Number.isInteger(feeMax / 10000) ? feeMax / 10000 : parseFloat((feeMax / 10000).toFixed(1))}만` : `${feeMax.toLocaleString()}원`
+    if (minStr === maxStr) return `₩${minStr}`
+    return `₩${minStr} ~ ₩${maxStr}`
+  } else if (hasMin) {
+    const minStr = feeMin >= 10000 ? `${Number.isInteger(feeMin / 10000) ? feeMin / 10000 : parseFloat((feeMin / 10000).toFixed(1))}만` : `${feeMin.toLocaleString()}원`
+    return `₩${minStr}~`
+  } else if (hasMax) {
+    const maxStr = feeMax >= 10000 ? `${Number.isInteger(feeMax / 10000) ? feeMax / 10000 : parseFloat((feeMax / 10000).toFixed(1))}만` : `${feeMax.toLocaleString()}원`
+    return `~₩${maxStr}`
+  }
+
+  return '미정'
+}
+
+function renderChannelBadge(primaryChannel?: string | null) {
+  const ch = primaryChannel || 'instagram'
+  const label = CHANNEL_LABELS[ch] || ch
+
+  return (
+    <span className="row" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      {ch === 'instagram' && (
+        <span className="ch-ico ig">
+          <svg viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="5" stroke="#fff" strokeWidth="1.8" />
+            <circle cx="12" cy="12" r="4" stroke="#fff" strokeWidth="1.8" />
+            <circle cx="17.5" cy="6.5" r="1.2" fill="#fff" />
+          </svg>
+        </span>
+      )}
+      {ch === 'youtube' && (
+        <span className="ch-ico yt">
+          <svg viewBox="0 0 24 24" fill="#fff">
+            <path d="M5 7l14 .2c1 0 1.6.6 1.7 1.6.2 2 .2 4.4 0 6.4-.1 1-.7 1.6-1.7 1.6L5 17c-1 0-1.6-.6-1.7-1.6-.2-2-.2-4.4 0-6.4C3.4 7.6 4 7 5 7zm5 2.2v5.6l5-2.8z" />
+          </svg>
+        </span>
+      )}
+      {ch === 'tiktok' && (
+        <span className="ch-ico tt">
+          <svg viewBox="0 0 24 24" fill="#fff">
+            <path d="M14 4c.3 2 1.6 3.6 3.6 3.9v2.3c-1.3.1-2.5-.3-3.6-1v5.4a4.8 4.8 0 1 1-4.8-4.8c.3 0 .5 0 .8.1v2.4a2.4 2.4 0 1 0 1.7 2.3V4H14z" />
+          </svg>
+        </span>
+      )}
+      <span>{label}</span>
+    </span>
+  )
+}
+
+function renderStatusBadge(status: string) {
+  switch (status) {
+    case 'candidate':
+      return <span className="badge soft">후보</span>
+    case 'selected':
+      return <span className="badge green">선택</span>
+    case 'confirmed':
+      return <span className="badge dark">확정</span>
+    default:
+      return <span className="badge gray">{CI_STATUS_LABELS[status as CIStatus] || status}</span>
+  }
 }
 
 export function CampaignDetailClient({ campaign: initialCampaign, influencers: initialInfluencers }: CampaignDetailClientProps) {
@@ -23,7 +148,6 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
 
   // Selected influencer for draft review tab
   const [selectedInfId, setSelectedInfId] = useState<string>(safeInfluencers[0]?.id || '')
-  const [selectedVersion, setSelectedVersion] = useState<string>('v2')
 
   // Outreach Modal state
   const [isOutreachModalOpen, setIsOutreachModalOpen] = useState(false)
@@ -93,7 +217,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
 
   // 4. 일괄 섭외 이메일 발송
   const handleBatchOutreach = async () => {
-    const selectedList = influencers.filter((inf) => inf.status === 'selected' || inf.badge_label === '선택' || true)
+    const selectedList = influencers.filter((inf) => inf.status === 'selected' || (inf as any).badge_label === '선택' || true)
     if (selectedList.length === 0) {
       toast.error('섭외할 인플루언서가 없습니다.')
       return
@@ -114,8 +238,8 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
         setIsOutreachModalOpen(false)
         setInfluencers((prev) =>
           prev.map((item) =>
-            item.status === 'selected' || item.badge_label === '선택'
-              ? { ...item, badge_label: '응답 대기', badge_variant: 'warn', status_text: '섭외 이메일 발송 완료 (응답 대기)' }
+            item.status === 'selected'
+              ? { ...item, status: 'outreached' }
               : item
           )
         )
@@ -149,43 +273,51 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     }
   }
 
-  // 삭제 액션
-  const handleDeleteInfluencer = (id: string) => {
-    setInfluencers((prev) => prev.filter((i) => i.id !== id))
-    toast.success('인플루언서가 제거됐습니다.')
+  // 삭제 액션 (candidate 상태만 삭제 가능, 확인 모달 없이 바로 삭제)
+  const handleDeleteInfluencer = async (ciId: string) => {
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/influencers/${ciId}`, {
+        method: 'DELETE',
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        toast.error(result.error || '인플루언서 삭제에 실패했습니다.')
+        return
+      }
+      setInfluencers((prev) => prev.filter((i) => i.id !== ciId))
+      setSelectedPreparingIds((prev) => prev.filter((id) => id !== ciId))
+      toast.success('인플루언서가 삭제되었습니다.')
+    } catch (error) {
+      console.error('Error deleting influencer:', error)
+      toast.error('인플루언서 삭제 중 오류가 발생했습니다.')
+    }
   }
 
   // Draft review actions
   const handleApproveDraft = () => {
     if (!currentInfluencer) return
+    const currentInfo = getInfluencerInfo(currentInfluencer)
     setInfluencers((prev) =>
       prev.map((item) =>
         item.id === currentInfluencer.id
-          ? { ...item, badge_label: '승인', badge_variant: 'soft', status_text: '광고주 승인 완료' }
+          ? { ...item, status: 'confirmed' }
           : item
       )
     )
-    toast.success(`${currentInfluencer.name} 님의 원고를 승인했습니다.`)
+    toast.success(`${currentInfo.name} 님의 원고를 승인했습니다.`)
   }
 
   const handleRequestRevision = () => {
     if (!currentInfluencer) return
-    setInfluencers((prev) =>
-      prev.map((item) =>
-        item.id === currentInfluencer.id
-          ? { ...item, badge_label: '수정요청', badge_variant: 'danger', status_text: '수정 요청 전달됨' }
-          : item
-      )
-    )
-    toast.info(`${currentInfluencer.name} 님에게 수정 요청을 전달했습니다.`)
+    const currentInfo = getInfluencerInfo(currentInfluencer)
+    toast.info(`${currentInfo.name} 님에게 수정 요청을 전달했습니다.`)
   }
 
   const handleRejectDraft = () => {
     if (!currentInfluencer) return
-    toast.error(`${currentInfluencer.name} 님의 원고를 반려했습니다.`)
+    const currentInfo = getInfluencerInfo(currentInfluencer)
+    toast.error(`${currentInfo.name} 님의 원고를 반려했습니다.`)
   }
-
-  const allConfirmed = influencers.length > 0 && influencers.every((i) => i.badge_label === '섭외 확정' || i.badge_label === '승인')
 
   return (
     <div className="main select-none">
@@ -366,47 +498,61 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                           </td>
                         </tr>
                       ) : (
-                        influencers.map((inf) => (
-                          <tr key={inf.id}>
-                            <td className="text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedPreparingIds.includes(inf.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedPreparingIds([...selectedPreparingIds, inf.id])
-                                  } else {
-                                    setSelectedPreparingIds(selectedPreparingIds.filter((id) => id !== inf.id))
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <span className={`av ${inf.avatar_color_class || 'c1'}`}>{inf.avatar_initial}</span>
-                                <div>
-                                  <div className="font-bold">{inf.name}</div>
-                                  <div className="text-xs text-[var(--muted)]">{inf.handle}</div>
+                        influencers.map((inf, idx) => {
+                          const infData = getInfluencerInfo(inf)
+                          const avatarInitial = infData.name ? infData.name[0] : '?'
+                          const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
+                          return (
+                            <tr key={inf.id}>
+                              <td className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPreparingIds.includes(inf.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedPreparingIds([...selectedPreparingIds, inf.id])
+                                    } else {
+                                      setSelectedPreparingIds(selectedPreparingIds.filter((id) => id !== inf.id))
+                                    }
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <div className="flex items-center gap-2">
+                                  <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
+                                  <div>
+                                    <div className="font-bold">{infData.name}</div>
+                                    {infData.handle && (
+                                      <div className="text-xs text-[var(--muted)]">{infData.handle}</div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td>{inf.channel_info || '인스타그램'}</td>
-                            <td className="right font-semibold">12.5만</td>
-                            <td className="right">₩60만</td>
-                            <td>
-                              <span className="badge gray">후보</span>
-                            </td>
-                            <td className="text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteInfluencer(inf.id)}
-                                className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
-                              >
-                                삭제
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                              <td>{renderChannelBadge(infData.primaryChannel)}</td>
+                              <td className="right font-semibold">
+                                {formatFollowers(infData.followers, infData.primaryChannel)}
+                              </td>
+                              <td className="right font-semibold">
+                                {formatFee(inf.proposed_fee, infData.feeMin, infData.feeMax)}
+                              </td>
+                              <td>{renderStatusBadge(inf.status)}</td>
+                              <td className="text-center">
+                                {inf.status === 'candidate' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteInfluencer(inf.id)}
+                                    className="text-xs text-red-500 font-bold hover:underline cursor-pointer"
+                                  >
+                                    삭제
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-[var(--muted)]">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>
@@ -472,11 +618,15 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                       </tr>
                     </thead>
                     <tbody>
-                      {influencers.map((inf) => {
+                      {influencers.map((inf, idx) => {
+                        const infData = getInfluencerInfo(inf)
+                        const avatarInitial = infData.name ? infData.name[0] : '?'
+                        const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
                         const statusBadge =
-                          inf.badge_label === '선택' || inf.status === 'selected' ? (
+                          inf.status === 'selected' ? (
                             <span className="badge soft">광고주 선택</span>
-                          ) : inf.badge_label === '패스' || inf.status === 'passed' ? (
+                          ) : inf.status === 'passed' ? (
                             <span className="badge danger">광고주 패스</span>
                           ) : (
                             <span className="badge gray">검토 대기</span>
@@ -485,15 +635,19 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                           <tr key={inf.id}>
                             <td>
                               <div className="flex items-center gap-2">
-                                <span className={`av ${inf.avatar_color_class || 'c1'}`}>{inf.avatar_initial}</span>
+                                <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
                                 <div>
-                                  <div className="font-bold">{inf.name}</div>
-                                  <div className="text-xs text-[var(--muted)]">{inf.handle}</div>
+                                  <div className="font-bold">{infData.name}</div>
+                                  {infData.handle && (
+                                    <div className="text-xs text-[var(--muted)]">{infData.handle}</div>
+                                  )}
                                 </div>
                               </div>
                             </td>
-                            <td>{inf.channel_info || '인스타그램'}</td>
-                            <td className="right font-semibold">12.5만</td>
+                            <td>{renderChannelBadge(infData.primaryChannel)}</td>
+                            <td className="right font-semibold">
+                              {formatFollowers(infData.followers, infData.primaryChannel)}
+                            </td>
                             <td>{statusBadge}</td>
                           </tr>
                         )
@@ -541,11 +695,15 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                       </tr>
                     </thead>
                     <tbody>
-                      {influencers.map((inf) => {
+                      {influencers.map((inf, idx) => {
+                        const infData = getInfluencerInfo(inf)
+                        const avatarInitial = infData.name ? infData.name[0] : '?'
+                        const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
                         const statusBadge =
-                          inf.badge_label === '섭외 확정' || inf.status === 'confirmed' ? (
+                          inf.status === 'confirmed' ? (
                             <span className="badge soft">✓ 섭외 확정</span>
-                          ) : inf.badge_label === '거절' || inf.status === 'rejected' ? (
+                          ) : inf.status === 'rejected' ? (
                             <span className="badge danger">✕ 거절</span>
                           ) : (
                             <span className="badge warn">⏳ 응답 대기</span>
@@ -554,15 +712,19 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                           <tr key={inf.id}>
                             <td>
                               <div className="flex items-center gap-2">
-                                <span className={`av ${inf.avatar_color_class || 'c1'}`}>{inf.avatar_initial}</span>
+                                <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
                                 <div>
-                                  <div className="font-bold">{inf.name}</div>
-                                  <div className="text-xs text-[var(--muted)]">{inf.handle}</div>
+                                  <div className="font-bold">{infData.name}</div>
+                                  {infData.handle && (
+                                    <div className="text-xs text-[var(--muted)]">{infData.handle}</div>
+                                  )}
                                 </div>
                               </div>
                             </td>
-                            <td>{inf.channel_info || '인스타그램'}</td>
-                            <td className="right font-semibold">₩60만</td>
+                            <td>{renderChannelBadge(infData.primaryChannel)}</td>
+                            <td className="right font-semibold">
+                              {formatFee(inf.proposed_fee, infData.feeMin, infData.feeMax)}
+                            </td>
                             <td>{statusBadge}</td>
                           </tr>
                         )
@@ -610,24 +772,36 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                       </tr>
                     </thead>
                     <tbody>
-                      {influencers.map((inf) => (
-                        <tr key={inf.id}>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <span className={`av ${inf.avatar_color_class || 'c1'}`}>{inf.avatar_initial}</span>
-                              <div>
-                                <div className="font-bold">{inf.name}</div>
-                                <div className="text-xs text-[var(--muted)]">{inf.handle}</div>
+                      {influencers.map((inf, idx) => {
+                        const infData = getInfluencerInfo(inf)
+                        const avatarInitial = infData.name ? infData.name[0] : '?'
+                        const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
+                        return (
+                          <tr key={inf.id}>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
+                                <div>
+                                  <div className="font-bold">{infData.name}</div>
+                                  {infData.handle && (
+                                    <div className="text-xs text-[var(--muted)]">{infData.handle}</div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>{inf.channel_info || '인스타그램'}</td>
-                          <td className="right font-semibold">₩60만</td>
-                          <td>
-                            <span className="badge soft">{inf.badge_label || '섭외 확정'}</span>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td>{renderChannelBadge(infData.primaryChannel)}</td>
+                            <td className="right font-semibold">
+                              {formatFee(inf.proposed_fee, infData.feeMin, infData.feeMax)}
+                            </td>
+                            <td>
+                              <span className="badge soft">
+                                {CI_STATUS_LABELS[inf.status as CIStatus] || '섭외 확정'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -700,20 +874,24 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                   <h2 style={{ fontSize: '17px', fontWeight: 700 }}>인플루언서 목록</h2>
                 </div>
                 <div className="inf-list">
-                  {influencers.map((inf) => {
+                  {influencers.map((inf, idx) => {
                     const isSelected = inf.id === selectedInfId
+                    const infData = getInfluencerInfo(inf)
+                    const avatarInitial = infData.name ? infData.name[0] : '?'
+                    const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
                     return (
                       <div
                         key={inf.id}
                         onClick={() => setSelectedInfId(inf.id)}
                         className={`inf-row ${isSelected ? 'sel' : ''}`}
                       >
-                        <span className={`av ${inf.avatar_color_class || 'c1'}`}>{inf.avatar_initial}</span>
+                        <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
                         <div className="info">
-                          <div className="nm">{inf.name}</div>
-                          <div className="st">{inf.status_text}</div>
+                          <div className="nm">{infData.name}</div>
+                          <div className="st">{CI_STATUS_LABELS[inf.status as CIStatus] || inf.status}</div>
                         </div>
-                        <span className={`badge ${inf.badge_variant}`}>{inf.badge_label}</span>
+                        {renderStatusBadge(inf.status)}
                       </div>
                     )
                   })}
@@ -721,49 +899,63 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
               </div>
             </div>
 
-            {currentInfluencer && (
-              <div
-                className="card card-pad"
-                style={{
-                  background: 'var(--white)',
-                  border: '1px solid var(--dark)',
-                  borderRadius: 'var(--r-lg)',
-                  boxShadow: 'var(--shadow)',
-                  padding: '26px',
-                }}
-              >
-                <div className="review-head">
-                  <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span className={`av ${currentInfluencer.avatar_color_class || 'c3'}`}>{currentInfluencer.avatar_initial}</span>
-                    <div>
-                      <div style={{ fontWeight: 500, fontSize: '17px' }}>
-                        {currentInfluencer.name} <span className="muted" style={{ fontWeight: 400, fontSize: '14px' }}>{currentInfluencer.handle}</span>
-                      </div>
-                      <div className="muted" style={{ fontSize: '13px' }}>{currentInfluencer.channel_info}</div>
-                    </div>
-                  </div>
-                  <span className={`badge ${currentInfluencer.badge_variant}`}>{currentInfluencer.badge_label}</span>
-                </div>
+            {currentInfluencer && (() => {
+              const curInfData = getInfluencerInfo(currentInfluencer)
+              const curIdx = influencers.findIndex((i) => i.id === currentInfluencer.id)
+              const avatarColorClass = AVATAR_COLORS[(curIdx >= 0 ? curIdx : 0) % AVATAR_COLORS.length]
+              const avatarInitial = curInfData.name ? curInfData.name[0] : '?'
 
-                <div className="draft-area" style={{ marginTop: '20px' }}>
-                  <div>
-                    <h4 style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 400, marginBottom: '6px' }}>캡션 원고</h4>
-                    <p className="cap">{currentInfluencer.caption || '작성된 캡션이 없습니다.'}</p>
-                    <div className="actions" style={{ marginTop: '24px' }}>
-                      <button type="button" onClick={handleApproveDraft} className="btn btn-green cursor-pointer">
-                        에이전시 승인 → 광고주
-                      </button>
-                      <button type="button" onClick={handleRequestRevision} className="btn btn-ghost cursor-pointer">
-                        수정 요청
-                      </button>
-                      <button type="button" onClick={handleRejectDraft} className="btn btn-ghost cursor-pointer" style={{ marginLeft: 'auto' }}>
-                        반려
-                      </button>
+              return (
+                <div
+                  className="card card-pad"
+                  style={{
+                    background: 'var(--white)',
+                    border: '1px solid var(--dark)',
+                    borderRadius: 'var(--r-lg)',
+                    boxShadow: 'var(--shadow)',
+                    padding: '26px',
+                  }}
+                >
+                  <div className="review-head">
+                    <div className="row" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span className={`av ${avatarColorClass}`}>{avatarInitial}</span>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: '17px' }}>
+                          {curInfData.name}{' '}
+                          {curInfData.handle && (
+                            <span className="muted" style={{ fontWeight: 400, fontSize: '14px' }}>
+                              {curInfData.handle}
+                            </span>
+                          )}
+                        </div>
+                        <div className="muted" style={{ fontSize: '13px' }}>
+                          {CHANNEL_LABELS[curInfData.primaryChannel] || curInfData.primaryChannel} · {formatFollowers(curInfData.followers, curInfData.primaryChannel)} 팔로워
+                        </div>
+                      </div>
+                    </div>
+                    {renderStatusBadge(currentInfluencer.status)}
+                  </div>
+
+                  <div className="draft-area" style={{ marginTop: '20px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '14px', color: 'var(--muted)', fontWeight: 400, marginBottom: '6px' }}>캡션 원고</h4>
+                      <p className="cap">{(currentInfluencer as any).caption || '작성된 캡션이 없습니다.'}</p>
+                      <div className="actions" style={{ marginTop: '24px' }}>
+                        <button type="button" onClick={handleApproveDraft} className="btn btn-green cursor-pointer">
+                          에이전시 승인 → 광고주
+                        </button>
+                        <button type="button" onClick={handleRequestRevision} className="btn btn-ghost cursor-pointer">
+                          수정 요청
+                        </button>
+                        <button type="button" onClick={handleRejectDraft} className="btn btn-ghost cursor-pointer" style={{ marginLeft: 'auto' }}>
+                          반려
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
         )}
 

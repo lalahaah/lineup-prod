@@ -9,6 +9,14 @@ import type { CampaignDetailData } from '@/app/api/campaigns/[id]/route'
 import type { CampaignInfluencerDetail } from '@/app/api/campaigns/[id]/influencers/route'
 import { STAGE_LABELS, STAGE_COLORS, CI_STATUS_LABELS, type CampaignStage, type CIStatus } from '@/types'
 import { CHANNEL_LABELS } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 interface CampaignDetailClientProps {
   campaign: CampaignDetailData
@@ -149,11 +157,15 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
   // Selected influencer for draft review tab
   const [selectedInfId, setSelectedInfId] = useState<string>(safeInfluencers[0]?.id || '')
 
-  // Outreach Modal state
+  // Send to Client Modal state (광고주에게 보내기 모달)
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false)
+  const [isSendingToClient, setIsSendingToClient] = useState(false)
+
+  // Outreach Modal state (일괄 섭외 모달)
   const [isOutreachModalOpen, setIsOutreachModalOpen] = useState(false)
   const [isSendingOutreach, setIsSendingOutreach] = useState(false)
 
-  // Selection for preparing table
+  // Selection for preparing table (체크박스 선택된 인플루언서 ID 목록)
   const [selectedPreparingIds, setSelectedPreparingIds] = useState<string[]>([])
 
   const currentStage = (campaign?.stage || 'preparing') as CampaignStage
@@ -163,41 +175,89 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
   const safeCategories = Array.isArray(campaign?.categories) ? campaign.categories : []
   const safeHashtags = Array.isArray(campaign?.hashtags) ? campaign.hashtags : safeCategories.length > 0 ? safeCategories : ['#신제품']
 
-  // 1. 포털 링크 복사
-  const handleCopyPortalLink = () => {
-    const link = `${window.location.origin}/portal/${campaign?.portal_token || ''}`
-    navigator.clipboard.writeText(link)
-    toast.success('포털 링크가 복사됐습니다 🔗')
+  const getPortalUrl = () => {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+    return `${baseUrl}/portal/${campaign?.portal_token || ''}`
   }
 
-  // 2. 준비중 -> 광고주 검토 단계 이동 (포털 링크 발송)
-  const handleSendToClient = async () => {
-    if (influencers.length === 0) {
-      toast.error('최소 1명 이상의 인플루언서를 추가해 주세요.')
+  // 1. 포털 링크 복사 (상단 헤더 버튼 - try/catch 필수)
+  const handleCopyPortalLink = async () => {
+    const portalUrl = getPortalUrl()
+    try {
+      await navigator.clipboard.writeText(portalUrl)
+      toast.success('포털 링크가 복사됐습니다 🔗')
+    } catch {
+      toast.error('복사 실패. 직접 복사해주세요: ' + portalUrl)
+    }
+  }
+
+  // 모달 내부 포털 링크 복사
+  const handleCopyModalPortalLink = async () => {
+    const portalUrl = getPortalUrl()
+    try {
+      await navigator.clipboard.writeText(portalUrl)
+      toast.success('포털 링크가 복사됐습니다 🔗')
+    } catch {
+      toast.error('복사 실패. 직접 복사해주세요: ' + portalUrl)
+    }
+  }
+
+  // 2. 준비중 -> 광고주 검토 모달 열기
+  const handleOpenSendModal = () => {
+    if (selectedPreparingIds.length === 0) {
+      toast.error('광고주에게 전달할 인플루언서를 최소 1명 이상 선택해 주세요.')
+      return
+    }
+    setIsSendModalOpen(true)
+  }
+
+  // 3. 모달에서 "전달하고 링크 복사" 클릭 시 실행
+  const handleConfirmSendToClient = async () => {
+    if (selectedPreparingIds.length === 0) {
+      toast.error('최소 1명 이상의 인플루언서를 선택해 주세요.')
       return
     }
 
+    setIsSendingToClient(true)
+    const portalUrl = getPortalUrl()
+
     try {
+      // ① PATCH /api/campaigns/[id] { stage: 'client_review' }
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage: 'client_review' }),
       })
 
-      if (res.ok) {
-        setCampaign((prev) => ({ ...prev, stage: 'client_review' }))
-        handleCopyPortalLink()
-        toast.success('포털 링크가 복사됐습니다. 광고주에게 전달해주세요 🔗')
-      } else {
+      if (!res.ok) {
         toast.error('단계 변경 실패')
+        return
       }
+
+      setCampaign((prev) => ({ ...prev, stage: 'client_review' }))
+
+      // ② 클립보드에 포털 링크 복사
+      try {
+        await navigator.clipboard.writeText(portalUrl)
+      } catch (err) {
+        console.error('Clipboard copy error:', err)
+      }
+
+      // ③ 모달 닫기
+      setIsSendModalOpen(false)
+
+      // ④ sonner toast 2개 순서대로
+      toast.success('캠페인이 광고주 검토 단계로 이동했습니다 ✅')
+      toast.success('포털 링크가 복사됐습니다. 광고주에게 전달해주세요 🔗')
     } catch (err) {
       console.error(err)
       toast.error('단계 변경 중 오류가 발생했습니다.')
+    } finally {
+      setIsSendingToClient(false)
     }
   }
 
-  // 3. 광고주 검토 완료 -> 섭외중 단계 수동 이동
+  // 4. 광고주 검토 완료 -> 섭외중 단계 수동 이동
   const handleCompleteClientReview = async () => {
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
@@ -215,7 +275,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     }
   }
 
-  // 4. 일괄 섭외 이메일 발송
+  // 5. 일괄 섭외 이메일 발송
   const handleBatchOutreach = async () => {
     const selectedList = influencers.filter((inf) => inf.status === 'selected' || (inf as any).badge_label === '선택' || true)
     if (selectedList.length === 0) {
@@ -254,7 +314,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     }
   }
 
-  // 5. 섭외중 -> 원고 검수 단계 이동
+  // 6. 섭외중 -> 원고 검수 단계 이동
   const handleMoveToReviewing = async () => {
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
@@ -318,6 +378,12 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
     const currentInfo = getInfluencerInfo(currentInfluencer)
     toast.error(`${currentInfo.name} 님의 원고를 반려했습니다.`)
   }
+
+  const selectedPreparingInfluencers = influencers.filter((inf) =>
+    selectedPreparingIds.includes(inf.id)
+  )
+
+  const portalUrl = getPortalUrl()
 
   return (
     <div className="main select-none">
@@ -472,7 +538,7 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                         <th className="w-10 text-center">
                           <input
                             type="checkbox"
-                            checked={selectedPreparingIds.length > 0 && selectedPreparingIds.length === influencers.length}
+                            checked={influencers.length > 0 && selectedPreparingIds.length === influencers.length}
                             onChange={(e) => {
                               if (e.target.checked) {
                                 setSelectedPreparingIds(influencers.map((i) => i.id))
@@ -558,15 +624,22 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
                   </table>
                 </div>
 
-                <div className="flex items-center justify-end pt-3 border-t">
+                {/* 하단 액션 바 */}
+                <div className="flex items-center justify-between pt-3 border-t">
+                  <span className="text-xs text-[var(--muted)]">
+                    선택 <b className="text-[var(--dark)]">{selectedPreparingIds.length}명</b> / 전체 {influencers.length}명
+                  </span>
                   <button
                     type="button"
-                    disabled={influencers.length === 0}
-                    onClick={handleSendToClient}
+                    disabled={selectedPreparingIds.length === 0}
+                    onClick={handleOpenSendModal}
                     className="btn btn-green font-sans cursor-pointer"
-                    style={{ opacity: influencers.length === 0 ? 0.5 : 1 }}
+                    style={{
+                      opacity: selectedPreparingIds.length === 0 ? 0.5 : 1,
+                      cursor: selectedPreparingIds.length === 0 ? 'not-allowed' : 'pointer',
+                    }}
                   >
-                    🚀 광고주에게 보내기 ({influencers.length}명)
+                    📤 광고주에게 보내기 ({selectedPreparingIds.length}명)
                   </button>
                 </div>
               </div>
@@ -975,6 +1048,100 @@ export function CampaignDetailClient({ campaign: initialCampaign, influencers: i
           </div>
         )}
       </div>
+
+      {/* 광고주에게 보내기 확인 모달 (shadcn Dialog) */}
+      <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
+        <DialogContent
+          showCloseButton={true}
+          className="max-w-lg w-full bg-[var(--white)] border border-[var(--dark)] rounded-[var(--r-lg)] shadow-[var(--shadow)] p-6 gap-5 sm:max-w-lg"
+        >
+          <DialogHeader className="gap-1.5 border-b border-[var(--line-soft)] pb-3 text-left">
+            <DialogTitle className="text-lg font-bold text-[var(--dark)] font-sans">
+              광고주에게 후보를 전달합니다
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[var(--muted)] leading-relaxed font-sans">
+              선택한 <b>{selectedPreparingIds.length}명</b>의 인플루언서를 광고주 포털에 공개합니다.<br />
+              광고주가 포털 링크에 접속하면 아래 후보를 확인할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* 선택된 인플루언서 미리보기 리스트 */}
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-bold text-[var(--dark)]">
+              선택된 인플루언서 ({selectedPreparingInfluencers.length}명)
+            </div>
+            <div className="max-h-48 overflow-y-auto border border-[var(--dark)] rounded-xl divide-y divide-[var(--line-soft)] bg-[var(--white)]">
+              {selectedPreparingInfluencers.length === 0 ? (
+                <div className="p-4 text-center text-xs text-[var(--muted)]">
+                  선택된 인플루언서가 없습니다.
+                </div>
+              ) : (
+                selectedPreparingInfluencers.map((inf, idx) => {
+                  const infData = getInfluencerInfo(inf)
+                  const avatarInitial = infData.name ? infData.name[0] : '?'
+                  const avatarColorClass = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+
+                  return (
+                    <div key={inf.id} className="flex items-center justify-between p-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={`av sm ${avatarColorClass}`}>{avatarInitial}</span>
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm text-[var(--dark)] truncate">{infData.name}</div>
+                          {infData.handle && (
+                            <div className="text-xs text-[var(--muted)] truncate">{infData.handle}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+                        {renderChannelBadge(infData.primaryChannel)}
+                        <span className="font-semibold text-[var(--dark)]">
+                          {formatFollowers(infData.followers, infData.primaryChannel)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* 포털 링크 미리보기 */}
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs font-bold text-[var(--dark)]">포털 링크 미리보기</div>
+            <div className="flex items-center gap-2 bg-[var(--gray)] border border-[var(--line-soft)] rounded-xl p-2.5">
+              <span className="text-xs font-mono text-[var(--dark)] truncate flex-1 select-all">
+                {portalUrl}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyModalPortalLink}
+                className="btn btn-ghost font-sans text-xs py-1.5 px-3 cursor-pointer flex-shrink-0"
+              >
+                복사
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--line-soft)] mt-2 -mx-0 -mb-0 bg-transparent rounded-none p-0">
+            <button
+              type="button"
+              onClick={() => setIsSendModalOpen(false)}
+              className="btn btn-ghost font-sans text-xs cursor-pointer"
+              disabled={isSendingToClient}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSendToClient}
+              disabled={isSendingToClient || selectedPreparingIds.length === 0}
+              className="btn btn-green font-sans text-xs cursor-pointer"
+            >
+              {isSendingToClient ? '전달 중...' : '전달하고 링크 복사'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 섭외 이메일 발송 확인 모달 */}
       {isOutreachModalOpen && (
